@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
 
 import java.util.Map;
 import java.util.Optional;
@@ -25,20 +26,35 @@ public class UHCPlayer {
     private Optional<Player> player;
     private boolean isDead = false;
     private boolean isStart = false;
+    private Location deadLocation;
 
     public UHCPlayer(UUID uuid) {
         this.uuid = uuid;
         this.name = Bukkit.getServer().getPlayer(uuid).getName();
     }
 
+    //遊戲開始
     public void start() {
+        setHealth(20);
+        clearAllEffects();
         isStart = true;
         isDead = false;
+        deadLocation = null;
     }
 
+    //遊戲結束
     public void stop() {
         isStart = false;
         isDead = false;
+        deadLocation = null;
+        clearAllEffects();
+    }
+
+    //清除所有效果
+    public void clearAllEffects() {
+        ifOnline(player -> {
+            player.getActivePotionEffects().stream().map(PotionEffect::getType).forEach(player::removePotionEffect);
+        });
     }
 
     public void setHealth(double h) {
@@ -103,5 +119,13 @@ public class UHCPlayer {
 
     public boolean isStart() {
         return isStart;
+    }
+
+    public Location getDeadLocation() {
+        return deadLocation;
+    }
+
+    public void setDeadLocation(Location deadLocation) {
+        this.deadLocation = deadLocation;
     }
 }

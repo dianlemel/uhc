@@ -3,26 +3,30 @@ package com.dianlemel.huc;
 import com.dianlemel.huc.item.AbstractItem;
 import com.dianlemel.huc.util.LocationUtil;
 import com.dianlemel.huc.util.MessageUtil;
+import com.dianlemel.huc.util.TaskUtil;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.*;
-import org.bukkit.event.inventory.CraftItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.RenderType;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static java.util.function.Predicate.not;
 
 public class UHCController implements Listener {
 
@@ -89,7 +93,7 @@ public class UHCController implements Listener {
         if (UHCTeam.isAllEmpty()) {
             throw new UHCException("任何隊伍尚未有任何玩家");
         }
-        if (isRunning) {
+        if (isRunning()) {
             throw new UHCException("遊戲正在進行中");
         }
         var config = UHCConfig.getInstance();
@@ -100,6 +104,7 @@ public class UHCController implements Listener {
         var minDistance = config.getMinDistance();
         var spawnY = config.getSpawnY();
         var teams = UHCTeam.getTeams();
+        //產生各隊伍的重生點
         var spawnPoints = range.generateRandomLocation(teams.size(), spawnY, minDistance);
         if (spawnPoints.size() != teams.size()) {
             throw new UHCException("隊伍數量與重生點數量不一致!");
@@ -129,11 +134,15 @@ public class UHCController implements Listener {
 
     //遊戲結束
     public void stop(ChatColor win) throws UHCException {
-        if (!isRunning) {
+        if (!isRunning()) {
             throw new UHCException("遊戲尚未進行中");
         }
+        isRunning = false;
+        //重置世界邊界
         world.getWorldBorder().reset();
+        //設置世界難度
         world.setDifficulty(Difficulty.PEACEFUL);
+        //遊戲結束
         UHCTeam.stopAllTeam();
         var subtitle = "";
         if (win != null) {
@@ -144,30 +153,37 @@ public class UHCController implements Listener {
 
     //檢查戰場狀態，誰輸誰贏
     private void check() {
-
+        TaskUtil.syncTask(() -> {
+            var teams = UHCTeam.getTeams().stream().filter(not(UHCTeam::isAllDead)).collect(Collectors.toList());
+            //當隊伍存活還有一組以上，就不繼續處理
+            if (teams.size() > 1) {
+                return;
+            }
+            try {
+                stop(teams.stream().map(UHCTeam::getColor).findFirst().orElse(null));
+            } catch (UHCException e) {
+                MessageUtil.sendError(e);
+            }
+        }, 20);
     }
 
     // 天氣改變
     @EventHandler
     public void onWeatherChangeEvent(WeatherChangeEvent event) {
-
-    }
-
-    // 玩家製作
-    @EventHandler
-    public void onCraftItemEvent(CraftItemEvent event) {
-
+        //阻止天氣改變
+        event.setCancelled(true);
     }
 
     // 玩家破壞方塊
     @EventHandler
     public void onBlockBreakEvent(BlockBreakEvent event) {
         //遊戲尚未開始，不進行處理
-        if (!isRunning) {
+        if (!isRunning()) {
             return;
         }
         var world = event.getBlock().getWorld();
         var location = event.getBlock().getLocation();
+        //如果是鐵礦、銅礦、金礦，需要阻止他噴出來，並噴出對應的錠
         switch (event.getBlock().getType()) {
             case COPPER_ORE:
                 event.setDropItems(true);
@@ -184,6 +200,48 @@ public class UHCController implements Listener {
         }
     }
 
+    //生物死亡
+    @EventHandler
+    public void onEntityDeathEvent(EntityDeathEvent event) {
+        //如果是玩家不處理
+        if (event.getEntityType().equals(EntityType.PLAYER)) {
+            return;
+        }
+        //遊戲尚未開始，不處理
+        if (!isRunning()) {
+            return;
+        }
+        //準備噴出的物品進行替換，馬鈴薯、生豬肉、生牛肉、生羊肉、生雞肉、生兔肉、生鱈魚、生鮭魚進行替換
+        event.getDrops().forEach(item -> {
+            switch (item.getType()) {
+                case POTATO:
+                    item.setType(Material.BAKED_POTATO);
+                    break;
+                case PORKCHOP:
+                    item.setType(Material.COOKED_PORKCHOP);
+                    break;
+                case BEEF:
+                    item.setType(Material.COOKED_BEEF);
+                    break;
+                case MUTTON:
+                    item.setType(Material.COOKED_MUTTON);
+                    break;
+                case CHICKEN:
+                    item.setType(Material.COOKED_CHICKEN);
+                    break;
+                case RABBIT:
+                    item.setType(Material.COOKED_RABBIT);
+                    break;
+                case COD:
+                    item.setType(Material.COOKED_COD);
+                    break;
+                case SALMON:
+                    item.setType(Material.COOKED_SALMON);
+                    break;
+            }
+        });
+    }
+
     // 生物受到傷害
     @EventHandler
     public void onEntityDamageByEntityEvent(EntityDamageByEntityEvent event) {
@@ -192,48 +250,103 @@ public class UHCController implements Listener {
             return;
         }
         //遊戲尚未開始，阻止受到傷害
-        event.setCancelled(!isRunning);
+        event.setCancelled(!isRunning());
     }
 
     // 玩家重生
     @EventHandler
     public void onPlayerRespawnEvent(PlayerRespawnEvent event) {
-        if (isRunning) {
-
-        } else {
-
+        var player = UHCPlayer.getUHCPlayer(event.getPlayer().getUniqueId());
+        //取得擊殺者
+        var killer = event.getPlayer().getKiller();
+        //如果有擊殺者、並且該擊殺者為玩家
+        if (killer != null && EntityType.PLAYER.equals(killer.getType())) {
+            //延遲5秒後執行
+            TaskUtil.syncTask(() -> {
+                //判斷遊戲是否正在進行
+                if (isRunning()) {
+                    //判斷玩家是否再線上
+                    player.ifOnline(p -> {
+                        //將玩家進入觀察者模式
+                        p.setGameMode(GameMode.SPECTATOR);
+                        //附身再擊殺者身上
+                        p.setSpectatorTarget(killer);
+                    });
+                }
+            }, 100);
         }
+        //取得死亡位置
+        var spawn = player.getDeadLocation();
+        if (spawn == null) {
+            spawn = UHCConfig.getInstance().getSpawn();
+        }
+        //將玩家進入觀察者模式
+        player.setGameMode(GameMode.SPECTATOR);
+        //設置重生點
+        event.setRespawnLocation(spawn);
     }
 
     // 生物回血
     @EventHandler
     public void onEntityRegainHealthEvent(EntityRegainHealthEvent event) {
         //遊戲開始，阻止自然回血
-        event.setCancelled(isRunning);
-    }
-
-    // 玩家互動
-    @EventHandler
-    public void onPlayerInteractEvent(PlayerInteractEvent event) {
-
+        event.setCancelled(isRunning());
     }
 
     // 玩家死亡
     @EventHandler
     public void onPlayerDeathEvent(PlayerDeathEvent event) {
-        var player = UHCPlayer.getUHCPlayer(event.getEntity().getUniqueId());
-        if (isRunning) {
-            check();
-        } else {
-
+        //如果遊戲尚未進行
+        if (!isRunning()) {
+            return;
         }
+        var player = UHCPlayer.getUHCPlayer(event.getEntity().getUniqueId());
+        var deadLocation = event.getEntity().getLocation();
+        var team = player.getTeam();
+        //當該玩家沒有隊伍，不進行處理
+        if (team == null) {
+            return;
+        }
+        //標記該玩家死亡
+        player.setDead(true);
+        //儲存死亡點
+        player.setDeadLocation(deadLocation);
+
+        //生成頭顱
+        var item = new ItemStack(Material.PLAYER_HEAD);
+        var meta = item.getItemMeta();
+        if (meta instanceof SkullMeta skullMeta) {
+            //設定該頭顱的資訊，讓他有SKIN
+            skullMeta.setOwnerProfile(player.getPlayer().getPlayerProfile());
+        }
+        item.setItemMeta(meta);
+        deadLocation.getWorld().dropItemNaturally(deadLocation, item);
+
+        //檢查
+        check();
+    }
+
+    //傳送
+    @EventHandler
+    public void onEntityPortalEvent(EntityPortalEvent event) {
+        //如果不是玩家就不處理
+        if (!EntityType.PLAYER.equals(event.getEntityType())) {
+            return;
+        }
+        var player = (Player) event.getEntity();
+        //如果是創造者模式，就不處理
+        if (GameMode.CREATIVE.equals(player.getGameMode())) {
+            return;
+        }
+        //如果世界不一樣，阻止傳送
+        event.setCancelled(event.getFrom().getWorld().equals(event.getTo().getWorld()));
     }
 
     //飽食度變更
     @EventHandler
     public void onFoodLevelChangeEvent(FoodLevelChangeEvent event) {
         //遊戲尚未開始，阻止飽食度變更
-        event.setCancelled(!isRunning);
+        event.setCancelled(!isRunning());
     }
 
     //玩家加入伺服器(呼叫優先級最高)
@@ -242,28 +355,46 @@ public class UHCController implements Listener {
         var player = UHCPlayer.getUHCPlayer(event.getPlayer().getUniqueId());
         var team = player.getTeam();
         player.online();
-        if (isRunning) {
+        //如果遊戲正在進行
+        if (isRunning()) {
+            //如果沒有隊伍
             if (team == null) {
-                player.getPlayer().kickPlayer(ChatColor.RED + "遊戲已經開始了!");
+                var p = player.getPlayer();
+                if (p.isOp()) {
+                    p.setGameMode(GameMode.SPECTATOR);
+                    p.teleport(UHCConfig.getInstance().getSpawn());
+                } else {
+                    p.kickPlayer(ChatColor.RED + "遊戲已經開始了!");
+                }
                 return;
             }
+            //如果死亡
             if (player.isDead()) {
                 player.setGameMode(GameMode.SPECTATOR);
                 return;
             }
+            //如果已經開始
             if (player.isStart()) {
                 return;
             }
+            //設置該玩家為生存模式
             player.setGameMode(GameMode.SURVIVAL);
-            var spawn = Optional.ofNullable(team.getStartSpawn()).orElseGet(() -> team.getPlayers().stream().filter(p -> p.isOnline() && !p.isDead()).findAny().map(p -> p.getPlayer().getLocation()).orElseGet(() -> null));
+            //取得遊戲開始重生點
+            var spawn = team.getStartSpawn();
+            //當取得不到重生點，就異常了
             if (spawn == null) {
+                //至少給一開始進入伺服器的眾生點
                 spawn = UHCConfig.getInstance().getSpawn();
                 MessageUtil.broadcastError(String.format("隊伍 %s 找不到重生點", team.getColor().name()));
             }
             player.teleport(spawn);
         } else {
+            //設置該玩家為冒險者模式
             player.setGameMode(GameMode.ADVENTURE);
+            //傳送到遊戲尚未開始的重生點
             player.teleport(UHCConfig.getInstance().getSpawn());
+            //清除所有效果
+            player.clearAllEffects();
         }
     }
 
@@ -271,17 +402,24 @@ public class UHCController implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerQuitEvent(PlayerQuitEvent event) {
         var player = UHCPlayer.getUHCPlayer(event.getPlayer().getUniqueId());
-        if (isRunning) {
+        //如果遊戲正在進行
+        if (isRunning()) {
+            //標記該玩家為離線
+            player.offline();
             check();
         } else {
             var team = player.getTeam();
+            //如果該玩家有隊伍
             if (team != null) {
+                //剔除
                 team.kickPlayer(player);
             }
+            //標記該玩家為離線
+            player.offline();
         }
-        player.offline();
     }
 
+    //遊戲是否正在進行
     public boolean isRunning() {
         return isRunning;
     }

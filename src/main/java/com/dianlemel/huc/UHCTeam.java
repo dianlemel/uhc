@@ -11,10 +11,7 @@ import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.RenderType;
 import org.bukkit.scoreboard.Team;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class UHCTeam {
@@ -168,8 +165,9 @@ public class UHCTeam {
         return players.stream().map(UHCPlayer::getUuid).anyMatch(uuid::equals);
     }
 
+    //取得開始遊戲重生點，當取得不到將會嘗試取得其他隊友的座標
     public Location getStartSpawn() {
-        return startSpawn;
+        return Optional.ofNullable(startSpawn).orElseGet(() -> getPlayers().stream().filter(p -> p.isOnline() && !p.isDead()).findAny().map(p -> p.getPlayer().getLocation()).orElseGet(() -> null));
     }
 
     public void setStartSpawn(Location startSpawn) {
@@ -178,13 +176,28 @@ public class UHCTeam {
 
     //遊戲開始
     public void start() {
-        players.forEach(UHCPlayer::start);
-
+        players.forEach(players -> {
+            if (players.isOnline()) {
+                players.start();
+                players.setGameMode(GameMode.SURVIVAL);
+                players.teleport(getStartSpawn());
+            }
+        });
     }
 
     //遊戲結束
     public void stop() {
+        players.forEach(players -> {
+            if (players.isOnline()) {
+                players.stop();
+                players.setGameMode(GameMode.ADVENTURE);
+                players.teleport(UHCConfig.getInstance().getSpawn());
+            }
+        });
+    }
 
+    public boolean isAllDead() {
+        return players.stream().filter(UHCPlayer::isOnline).anyMatch(UHCPlayer::isDead);
     }
 
     public List<UHCPlayer> getPlayers() {
