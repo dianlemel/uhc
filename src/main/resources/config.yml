@@ -1,0 +1,76 @@
+#PVP世界中心點
+center: world,0,0,0
+#死亡音效
+deadMusic: 123
+#重生點範圍
+spawn:
+  R1: world,0,0,0
+  R2: world,0,0,0
+#邊界
+border:
+  #花多少時間縮置到最小範圍(秒)
+  time: 100
+  #縮圈至指定範圍(半徑)
+  minRadius: 16
+  #遊戲開始最大範圍(半徑)
+  maxRadius: 256
+#遊戲開始設定
+start:
+  #每隊重生的最小距離
+  minDistance: 50
+  #每隊重生初始高度
+  spawnY: 100
+  #礦物懲罰(秒)
+  mineralPunish: 100
+  #剩餘幾秒後清除怪物(秒)
+  clearMonsterTimer: 100
+#特殊物品
+specialItem:
+    #種類
+  - type: INSTANT_HEALTH_BOOK
+    #編號
+    key: ihb
+    #物品名稱
+    name: 生日快樂
+    #物品材質
+    material: BOOK
+    #物品敘述
+    lore:
+      - ''
+    #合成方式
+    recipe:
+      - 'AAA'
+      - 'ABA'
+      - 'AAA'
+    #根據recipe設定對應的材質
+    ingredient:
+      A: GOLD_INGOT
+      B: PLAYER_HEAD
+    #恢復血量
+    health: 10
+    #獲得效果
+    effects:
+        #效果名稱
+      - name: ABSORPTION
+        #效果等級
+        level: 0
+        #效果時間(tick)(20 tick = 1 s)
+        time: 120
+  - type: LUCKY_BLOCK
+    key: lb
+    name: 禮物箱
+    material: stripped_cherry_wood
+    lore:
+      - ''
+    recipe:
+      - 'AAA'
+      - 'ABA'
+      - 'AAA'
+    ingredient:
+      A: IRON_INGOT
+      B: CHEST
+    #隨機物品
+    randomItem:
+      - material: GOLD
+        chance: 10
+        amount: 1

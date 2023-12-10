@@ -1,0 +1,40 @@
+plugins {
+    id "java-library"
+    id "maven-publish"
+    id "xyz.jpenilla.run-paper" version "2.2.2"
+}
+
+group = 'com.dianlemel.huc'
+version = '1.0'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url = uri('https://hub.spigotmc.org/nexus/content/repositories/snapshots/') }
+    maven { url = uri('https://oss.sonatype.org/content/groups/public/') }
+    maven { url = uri('https://repo.maven.apache.org/maven2/') }
+    maven { url "https://repo.dmulloy2.net/repository/public/" }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}
+
+dependencies {
+    compileOnly 'org.spigotmc:spigot:1.20.1-R0.1-SNAPSHOT'
+}
+
+tasks.named("runServer") {
+    def mcVersion = "1.20.1"
+    minecraftVersion mcVersion
+    runDirectory rootProject.file("run/$mcVersion")
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    jvmArgs += [ "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=25566" ]
+}

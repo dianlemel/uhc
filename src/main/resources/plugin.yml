@@ -1,0 +1,5 @@
+name: UHC
+version: '${version}'
+main: com.dianlemel.huc.UHCCore
+api-version: 1.18
+authors: [(HE,XUE-DIAN)]
