@@ -3,7 +3,6 @@ package com.dianlemel.huc.util;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.util.Vector;
-import org.joml.Vector2d;
 
 import java.util.ArrayList;
 import java.util.List;

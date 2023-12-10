@@ -3,14 +3,10 @@ package com.dianlemel.huc.util;
 import com.dianlemel.huc.UHCException;
 import com.google.common.collect.Lists;
 import org.bukkit.*;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredListener;
-import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.List;
 import java.util.Optional;

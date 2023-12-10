@@ -1,7 +1,6 @@
 package com.dianlemel.huc.util;
 
 import com.google.common.collect.Lists;
-import net.minecraft.world.phys.Vec3D;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -9,7 +8,6 @@ import org.bukkit.util.Vector;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -55,10 +53,6 @@ public class LocationUtil {
             return false;
         }
         return R1.distance(R2) <= v;
-    }
-
-    public static Vec3D toVec3D(Location loc) {
-        return new Vec3D(loc.getX(), loc.getY(), loc.getZ());
     }
 
     public static boolean inRange(Location target, Range range, boolean ignoreHeight) {
