@@ -176,6 +176,7 @@ public class UHCController implements Listener {
         }
         isRunning = false;
         //停止所有計時器
+        Optional.ofNullable(showNameTimer).ifPresent(BukkitTask::cancel);
         Optional.ofNullable(clearMonsterTimer).ifPresent(BukkitTask::cancel);
         Optional.ofNullable(glowingTimer).ifPresent(BukkitTask::cancel);
         //重置世界邊界
