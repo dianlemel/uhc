@@ -17,6 +17,10 @@ public class UHCPlayer {
 
     private static final Map<UUID, UHCPlayer> players = Maps.newConcurrentMap();
 
+    public static UHCPlayer getUHCPlayer(Player player) {
+        return getUHCPlayer(player.getUniqueId());
+    }
+
     public static UHCPlayer getUHCPlayer(UUID uuid) {
         return players.computeIfAbsent(uuid, UHCPlayer::new);
     }
@@ -27,6 +31,8 @@ public class UHCPlayer {
     private boolean isDead = false;
     private boolean isStart = false;
     private Location deadLocation;
+
+    private int blockBreakCount = 0;
 
     public UHCPlayer(UUID uuid) {
         this.uuid = uuid;
@@ -40,6 +46,7 @@ public class UHCPlayer {
         isStart = true;
         isDead = false;
         deadLocation = null;
+        blockBreakCount = 0;
     }
 
     //遊戲結束
@@ -127,5 +134,15 @@ public class UHCPlayer {
 
     public void setDeadLocation(Location deadLocation) {
         this.deadLocation = deadLocation;
+    }
+
+    //獲取破壞方塊次數
+    public int getBlockBreakCount() {
+        return blockBreakCount;
+    }
+
+    //設置破壞方塊次數
+    public void setBlockBreakCount(int blockBreakCount) {
+        this.blockBreakCount = blockBreakCount;
     }
 }

@@ -1,12 +1,12 @@
 package com.dianlemel.huc;
 
 import com.dianlemel.huc.item.AbstractItem;
+import com.dianlemel.huc.util.BukkitUtil;
 import com.dianlemel.huc.util.LocationUtil;
 import com.dianlemel.huc.util.MessageUtil;
 import com.dianlemel.huc.util.TaskUtil;
 import org.bukkit.*;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -16,11 +16,14 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.RenderType;
+import org.bukkit.scoreboard.Team;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -43,6 +46,10 @@ public class UHCController implements Listener {
     }
 
     private boolean isRunning = false;
+    private boolean spawnMonster = true;
+    private BukkitTask clearMonsterTimer;
+    private BukkitTask glowingTimer;
+    private BukkitTask showNameTimer;
     private final World world;
 
     public UHCController() {
@@ -130,6 +137,36 @@ public class UHCController implements Listener {
         UHCTeam.startAllTeam();
 
         MessageUtil.broadcastTitle("", "§6遊戲開始", 40, 40, 100);
+
+        spawnMonster = true;
+        clearMonsterTimer = TaskUtil.syncTaskLater(this::clearMonster, config.getClearMonsterTimer());
+        glowingTimer = TaskUtil.syncTaskLater(this::glowingAllPlayer, config.getGlowingTimer());
+        showNameTimer = TaskUtil.syncTaskLater(this::showName, config.getShowNameTimer());
+
+        //隱藏玩家名稱，只有隊伍自己人看得到
+        UHCTeam.getTeams().forEach(team -> {
+            team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OTHER_TEAMS);
+        });
+    }
+
+    //顯示玩家名稱，可以看得到敵方
+    private void showName(){
+        UHCTeam.getTeams().forEach(team -> {
+            team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
+        });
+    }
+
+    //清除所有怪物
+    private void clearMonster() {
+        spawnMonster = false;
+        world.getLivingEntities().stream().filter(Monster.class::isInstance).forEach(Entity::remove);
+    }
+
+    //所有生存模式下的玩家都發光
+    private void glowingAllPlayer() {
+        BukkitUtil.getPlayers(world, GameMode.SURVIVAL).forEach(player -> {
+            player.setGlowing(true);
+        });
     }
 
     //遊戲結束
@@ -138,16 +175,16 @@ public class UHCController implements Listener {
             throw new UHCException("遊戲尚未進行中");
         }
         isRunning = false;
+        //停止所有計時器
+        Optional.ofNullable(clearMonsterTimer).ifPresent(BukkitTask::cancel);
+        Optional.ofNullable(glowingTimer).ifPresent(BukkitTask::cancel);
         //重置世界邊界
         world.getWorldBorder().reset();
         //設置世界難度
         world.setDifficulty(Difficulty.PEACEFUL);
         //遊戲結束
         UHCTeam.stopAllTeam();
-        var subtitle = "";
-        if (win != null) {
-            subtitle = String.format("§6 %s 獲勝", win.name());
-        }
+        var subtitle = Optional.ofNullable(win).map(v -> String.format("§6 %s 獲勝", v.name())).orElse("");
         MessageUtil.broadcastTitle("§6遊戲結束", subtitle, 40, 40, 100);
     }
 
@@ -174,6 +211,41 @@ public class UHCController implements Listener {
         event.setCancelled(true);
     }
 
+    //實體生成
+    @EventHandler
+    public void onEntitySpawnEvent(EntitySpawnEvent event) {
+        //遊戲尚未開始，不進行處理
+        if (!isRunning()) {
+            return;
+        }
+        var entity = event.getEntity();
+        //當實體為掉落物
+        if (entity instanceof Item item) {
+            //取得該掉落物的種類
+            var itemStack = item.getItemStack();
+            switch (itemStack.getType()) {
+                case POTATO:
+                    itemStack.setType(Material.BAKED_POTATO);
+            }
+            return;
+        }
+        //如果是怪物
+        if (entity instanceof Monster) {
+            //是否要阻止生成怪物
+            if (!spawnMonster) {
+                entity.remove();
+            }
+        }
+    }
+
+    //當chunk被載入的時候，再該chunk的生物也會被載入
+    @EventHandler
+    public void onEntitiesLoadEvent(EntitiesLoadEvent event) {
+        if (!spawnMonster) {
+            event.getEntities().stream().filter(Monster.class::isInstance).forEach(Entity::remove);
+        }
+    }
+
     // 玩家破壞方塊
     @EventHandler
     public void onBlockBreakEvent(BlockBreakEvent event) {
@@ -184,6 +256,7 @@ public class UHCController implements Listener {
         var world = event.getBlock().getWorld();
         var location = event.getBlock().getLocation();
         //如果是鐵礦、銅礦、金礦，需要阻止他噴出來，並噴出對應的錠
+        //如果是鵝卵石、深板岩，增加挖礦次數
         switch (event.getBlock().getType()) {
             case COPPER_ORE:
                 event.setDropItems(true);
@@ -196,6 +269,11 @@ public class UHCController implements Listener {
             case GOLD_ORE:
                 event.setDropItems(true);
                 world.dropItemNaturally(location, new ItemStack(Material.GOLD_INGOT));
+                break;
+            case STONE:
+            case DEEPSLATE:
+                var player = UHCPlayer.getUHCPlayer(event.getPlayer());
+                player.setBlockBreakCount(player.getBlockBreakCount() + 1);
                 break;
         }
     }
@@ -276,10 +354,7 @@ public class UHCController implements Listener {
             }, 100);
         }
         //取得死亡位置
-        var spawn = player.getDeadLocation();
-        if (spawn == null) {
-            spawn = UHCConfig.getInstance().getSpawn();
-        }
+        var spawn = Optional.ofNullable(player.getDeadLocation()).orElse(UHCConfig.getInstance().getSpawn());
         //將玩家進入觀察者模式
         player.setGameMode(GameMode.SPECTATOR);
         //設置重生點
@@ -380,13 +455,11 @@ public class UHCController implements Listener {
             //設置該玩家為生存模式
             player.setGameMode(GameMode.SURVIVAL);
             //取得遊戲開始重生點
-            var spawn = team.getStartSpawn();
-            //當取得不到重生點，就異常了
-            if (spawn == null) {
-                //至少給一開始進入伺服器的眾生點
-                spawn = UHCConfig.getInstance().getSpawn();
+            var spawn = Optional.ofNullable(team.getStartSpawn()).orElseGet(() -> {
+                //當取得不到重生點，至少給一開始進入伺服器的眾生點
                 MessageUtil.broadcastError(String.format("隊伍 %s 找不到重生點", team.getColor().name()));
-            }
+                return UHCConfig.getInstance().getSpawn();
+            });
             player.teleport(spawn);
         } else {
             //設置該玩家為冒險者模式
@@ -410,10 +483,9 @@ public class UHCController implements Listener {
         } else {
             var team = player.getTeam();
             //如果該玩家有隊伍
-            if (team != null) {
-                //剔除
-                team.kickPlayer(player);
-            }
+            Optional.ofNullable(team).ifPresent(t -> {
+                t.kickPlayer(player);
+            });
             //標記該玩家為離線
             player.offline();
         }

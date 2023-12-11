@@ -22,10 +22,12 @@ public class UHCConfig {
     private String deadMusic;
     private Range spawn;
     private int borderTimer;
+    private int showNameTimer;
     private int borderMinRadius;
     private int borderMaxRadius;
     private int mineralPunish;
     private int clearMonsterTimer;
+    private int glowingTimer;
     private List<MapData> specialItems;
     private int minDistance;
     private int spawnY;
@@ -49,8 +51,10 @@ public class UHCConfig {
         var start = config.getMapData("start");
         mineralPunish = start.getInteger("mineralPunish");
         clearMonsterTimer = start.getInteger("clearMonsterTimer");
-        minDistance = start.getInteger("minDistance");
+        glowingTimer = start.getInteger("glowingTimer");
         spawnY = start.getInteger("spawnY");
+        minDistance = start.getInteger("minDistance");
+        showNameTimer = start.getInteger("showIDTimer");
 
         specialItems = config.getMapList("specialItem");
     }
@@ -97,5 +101,13 @@ public class UHCConfig {
 
     public int getSpawnY() {
         return spawnY;
+    }
+
+    public int getGlowingTimer() {
+        return glowingTimer;
+    }
+
+    public int getShowNameTimer() {
+        return showNameTimer;
     }
 }

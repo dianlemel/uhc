@@ -20,10 +20,14 @@ start:
   minDistance: 50
   #每隊重生初始高度
   spawnY: 100
+  #幾秒後顯示名稱
+  showNameTimer: 100
   #礦物懲罰(秒)
   mineralPunish: 100
   #剩餘幾秒後清除怪物(秒)
   clearMonsterTimer: 100
+  #剩餘幾秒後全體玩家發光(秒)
+  glowingTimer: 100
 #特殊物品
 specialItem:
     #種類
