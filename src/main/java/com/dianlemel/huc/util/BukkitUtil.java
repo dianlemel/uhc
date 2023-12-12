@@ -91,8 +91,12 @@ public class BukkitUtil {
         return plugin;
     }
 
-    public static void playSoundToAll(Sound arg1, SoundCategory arg2, float arg3, float arg4) {
-        Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), arg1, arg2, arg3, arg4));
+    public static void playSoundToAll(String sound, float volume, float pitch) {
+        Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), sound, volume, pitch));
+    }
+
+    public static void playSoundToAll(Sound sound, float volume, float pitch) {
+        Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), sound, volume, pitch));
     }
 
 }

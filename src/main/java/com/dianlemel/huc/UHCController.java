@@ -19,6 +19,8 @@ import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -27,11 +29,10 @@ import org.bukkit.scoreboard.Team;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.util.function.Predicate.not;
 
-public class UHCController implements Listener {
+public class UHCController implements Listener, Runnable {
 
     private static final String HEALTH_PLAYER_LIST = "HEALTH_PLAYER_LIST";
     private static final String HEALTH_BELOW_NAME = "BELOW_NAME";
@@ -47,9 +48,8 @@ public class UHCController implements Listener {
 
     private boolean isRunning = false;
     private boolean spawnMonster = true;
-    private BukkitTask clearMonsterTimer;
-    private BukkitTask glowingTimer;
-    private BukkitTask showNameTimer;
+    private BukkitTask timer;
+    private int time;
     private final World world;
 
     public UHCController() {
@@ -93,7 +93,7 @@ public class UHCController implements Listener {
     }
 
     //遊戲開始
-    public void start() throws UHCException {
+    public void start(int time) throws UHCException {
         if (UHCTeam.getTeams().isEmpty()) {
             throw new UHCException("尚未建立隊伍");
         }
@@ -103,6 +103,7 @@ public class UHCController implements Listener {
         if (isRunning()) {
             throw new UHCException("遊戲正在進行中");
         }
+        this.time = time;
         var config = UHCConfig.getInstance();
 
         //各隊伍重生點計算
@@ -124,8 +125,14 @@ public class UHCController implements Listener {
 
         //邊界設定
         var worldBorder = world.getWorldBorder();
+        //中心點
         worldBorder.setCenter(config.getCenter());
+        //初始範圍
         worldBorder.setSize(config.getBorderMaxRadius());
+        //距離幾格顯示警告
+        worldBorder.setWarningDistance(16);
+        //邊界外持續受到傷害
+        worldBorder.setDamageAmount(0.1);
 
         //世界難度
         world.setDifficulty(Difficulty.HARD);
@@ -139,34 +146,57 @@ public class UHCController implements Listener {
         MessageUtil.broadcastTitle("", "§6遊戲開始", 40, 40, 100);
 
         spawnMonster = true;
-        clearMonsterTimer = TaskUtil.syncTaskLater(this::clearMonster, config.getClearMonsterTimer());
-        glowingTimer = TaskUtil.syncTaskLater(this::glowingAllPlayer, config.getGlowingTimer());
-        showNameTimer = TaskUtil.syncTaskLater(this::showName, config.getShowNameTimer());
+        timer = TaskUtil.syncTimer(this, 20, 20);
 
         //隱藏玩家名稱，只有隊伍自己人看得到
-        UHCTeam.getTeams().forEach(team -> {
-            team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OTHER_TEAMS);
-        });
+        UHCTeam.getTeams().forEach(team -> team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OTHER_TEAMS));
+    }
+
+    //每一秒執行一次
+    @Override
+    public void run() {
+        time--;
+        var config = UHCConfig.getInstance();
+        if (time == config.getClearMonsterTimer()) {
+            clearMonster();
+        }
+        if (time == config.getGlowingTimer()) {
+            glowingAllPlayer();
+        }
+        if (time == config.getShowNameTimer()) {
+            showName();
+        }
+        if (time == config.getBorderTimer()) {
+            startBoard();
+        }
+    }
+
+    //開始縮圈
+    private void startBoard() {
+        MessageUtil.broadcastInfo("開始縮圈");
+        var worldBorder = world.getWorldBorder();
+        var config = UHCConfig.getInstance();
+        //設定需要花費幾秒時間，將邊界縮至指定的範圍
+        worldBorder.setSize(config.getBorderMinRadius(), config.getBorderTimer());
     }
 
     //顯示玩家名稱，可以看得到敵方
-    private void showName(){
-        UHCTeam.getTeams().forEach(team -> {
-            team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
-        });
+    private void showName() {
+        MessageUtil.broadcastInfo("現在可以看得到敵方名稱");
+        UHCTeam.getTeams().forEach(team -> team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS));
     }
 
     //清除所有怪物
     private void clearMonster() {
+        MessageUtil.broadcastInfo("清除怪物");
         spawnMonster = false;
         world.getLivingEntities().stream().filter(Monster.class::isInstance).forEach(Entity::remove);
     }
 
     //所有生存模式下的玩家都發光
     private void glowingAllPlayer() {
-        BukkitUtil.getPlayers(world, GameMode.SURVIVAL).forEach(player -> {
-            player.setGlowing(true);
-        });
+        MessageUtil.broadcastInfo("所有玩家發光");
+        BukkitUtil.getPlayers(world, GameMode.SURVIVAL).forEach(player -> player.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, UHCConfig.getInstance().getShowNameTimer() * 20, 0)));
     }
 
     //遊戲結束
@@ -175,10 +205,8 @@ public class UHCController implements Listener {
             throw new UHCException("遊戲尚未進行中");
         }
         isRunning = false;
-        //停止所有計時器
-        Optional.ofNullable(showNameTimer).ifPresent(BukkitTask::cancel);
-        Optional.ofNullable(clearMonsterTimer).ifPresent(BukkitTask::cancel);
-        Optional.ofNullable(glowingTimer).ifPresent(BukkitTask::cancel);
+        //停止計時器
+        Optional.ofNullable(timer).ifPresent(BukkitTask::cancel);
         //重置世界邊界
         world.getWorldBorder().reset();
         //設置世界難度
@@ -192,7 +220,7 @@ public class UHCController implements Listener {
     //檢查戰場狀態，誰輸誰贏
     private void check() {
         TaskUtil.syncTask(() -> {
-            var teams = UHCTeam.getTeams().stream().filter(not(UHCTeam::isAllDead)).collect(Collectors.toList());
+            var teams = UHCTeam.getTeams().stream().filter(not(UHCTeam::isAllDead)).toList();
             //當隊伍存活還有一組以上，就不繼續處理
             if (teams.size() > 1) {
                 return;
@@ -273,9 +301,32 @@ public class UHCController implements Listener {
                 break;
             case STONE:
             case DEEPSLATE:
-                var player = UHCPlayer.getUHCPlayer(event.getPlayer());
-                player.setBlockBreakCount(player.getBlockBreakCount() + 1);
+                onBlockBreakCount(event.getPlayer());
                 break;
+        }
+    }
+
+    //魚骨判斷
+    private void onBlockBreakCount(Player p) {
+        var player = UHCPlayer.getUHCPlayer(p);
+        var config = UHCConfig.getInstance();
+        var count = player.getBlockBreakCount() + 1;
+        player.setBlockBreakCount(count);
+        if (count > config.getBaselineThreshold()) {
+            count = -config.getBaselineThreshold();
+            if (count % config.getProgressiveTriggerRule() == 0) {
+                var effect = AbstractItem.toEffect(BukkitUtil.random(config.getPunishedEffects()));
+                //給予效果
+                p.addPotionEffect(effect);
+                //清除所有鎬類
+                p.getInventory().remove(Material.WOODEN_PICKAXE);
+                p.getInventory().remove(Material.STONE_PICKAXE);
+                p.getInventory().remove(Material.DIAMOND_PICKAXE);
+                p.getInventory().remove(Material.IRON_PICKAXE);
+                p.getInventory().remove(Material.NETHERITE_PICKAXE);
+                MessageUtil.broadcastInfo(p.getName() + " 受到魚骨懲罰");
+                BukkitUtil.playSoundToAll(Sound.BLOCK_ANVIL_PLACE, 1f, 0);
+            }
         }
     }
 
@@ -398,6 +449,10 @@ public class UHCController implements Listener {
         item.setItemMeta(meta);
         deadLocation.getWorld().dropItemNaturally(deadLocation, item);
 
+        var music = UHCConfig.getInstance().getDeadMusic();
+        //播放死亡
+        BukkitUtil.playSoundToAll(music, 1f, 0);
+
         //檢查
         check();
     }
@@ -496,5 +551,4 @@ public class UHCController implements Listener {
     public boolean isRunning() {
         return isRunning;
     }
-
 }
