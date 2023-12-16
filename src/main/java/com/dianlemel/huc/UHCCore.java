@@ -21,7 +21,7 @@ public class UHCCore extends JavaPlugin {
         getServer().getPluginManager().registerEvents(UHCController.getInstance(), this);
         UHCConfig.getInstance();
         var command = new UHCCommand();
-        PluginCommand pluginCommand = Bukkit.getPluginCommand("huc");
+        PluginCommand pluginCommand = Bukkit.getPluginCommand("uhc");
         pluginCommand.setExecutor(command);
         pluginCommand.setTabCompleter(command);
         AbstractItem.load();

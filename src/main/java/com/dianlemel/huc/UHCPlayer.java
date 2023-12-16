@@ -25,6 +25,10 @@ public class UHCPlayer {
         return players.computeIfAbsent(uuid, UHCPlayer::new);
     }
 
+    public static UHCPlayer getUHCPlayer(String name) {
+        return players.values().stream().filter(p -> p.getName().equals(name)).findAny().orElse(null);
+    }
+
     private final UUID uuid;
     private final String name;
     private Optional<Player> player;

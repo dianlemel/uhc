@@ -3,3 +3,6 @@ version: '${version}'
 main: com.dianlemel.huc.UHCCore
 api-version: 1.18
 authors: [(HE,XUE-DIAN)]
+commands:
+  uhc:
+    description: 基礎指令

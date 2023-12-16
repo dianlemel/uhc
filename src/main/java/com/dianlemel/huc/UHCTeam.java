@@ -76,8 +76,14 @@ public class UHCTeam {
         return teams.stream().anyMatch(team -> team.inTeam(uuid));
     }
 
+    //根據玩家的UUID去取得玩家所再的隊伍
     public static UHCTeam getTeam(UUID uuid) {
         return teams.stream().filter(team -> team.inTeam(uuid)).findAny().orElseGet(() -> null);
+    }
+
+    //取得隊伍
+    public static UHCTeam getTeam(String name) {
+        return teams.stream().filter(t -> t.getColor().name().equals(name)).findAny().orElse(null);
     }
 
     //踢出所有玩家，並清空所有隊伍
@@ -162,6 +168,16 @@ public class UHCTeam {
 
     //判斷該玩家是否在這隊伍
     public boolean inTeam(UUID uuid) {
+        return players.stream().map(UHCPlayer::getUuid).anyMatch(uuid::equals);
+    }
+
+    //判斷該玩家是否在這隊伍
+    public boolean inTeam(String name) {
+        var player = Bukkit.getPlayer(name);
+        if (player == null) {
+            return false;
+        }
+        var uuid = player.getUniqueId();
         return players.stream().map(UHCPlayer::getUuid).anyMatch(uuid::equals);
     }
 
