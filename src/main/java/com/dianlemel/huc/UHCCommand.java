@@ -1,5 +1,6 @@
 package com.dianlemel.huc;
 
+import com.dianlemel.huc.item.AbstractItem;
 import com.dianlemel.huc.util.MessageUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -28,6 +29,7 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
         COMMANDS.put("random", "<是否包含已經有隊伍> 隨機分隊");
         COMMANDS.put("join", "<隊伍> <玩家...> 玩家加入該隊伍");
         COMMANDS.put("leave", "<隊伍> <玩家...> 該隊伍踢除玩家");
+        COMMANDS.put("give", "<物品KEY> 獲取特殊物品");
     }
 
     @Override
@@ -121,6 +123,22 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
                             return true;
                         }
                         break;
+                    case "give":
+                        if (strings.length == 2) {
+                            if (sender instanceof Player player) {
+                                var abstractItem = AbstractItem.getItem(strings[1]);
+                                if (abstractItem != null) {
+                                    var item = abstractItem.createItem();
+                                    player.getInventory().addItem(item);
+                                } else {
+                                    MessageUtil.sendError(sender, String.format("無此 %s 編號", strings[1]));
+                                }
+                            } else {
+                                MessageUtil.sendError(sender, "不支援後端輸入");
+                            }
+                            return true;
+                        }
+                        break;
                 }
                 Optional.ofNullable(COMMANDS.get(strings[0])).ifPresent(cmd -> {
                     MessageUtil.sendInfo(sender, String.format("/uhc %s %s", strings[0], cmd));
@@ -147,6 +165,11 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
             switch (strings[0]) {
                 case "random":
                     return ON_OFF.stream().filter(c -> c.startsWith(strings[1])).collect(Collectors.toList());
+                case "give":
+                    return AbstractItem.getItems().stream()
+                            .map(AbstractItem::getKey)
+                            .filter(c -> c.startsWith(strings[1]))
+                            .collect(Collectors.toList());
                 case "join":
                 case "leave":
                 case "stop":

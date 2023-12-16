@@ -15,6 +15,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +32,10 @@ public abstract class AbstractItem implements Listener {
 
     public static AbstractItem getItem(String key) {
         return items.get(key);
+    }
+
+    public static Collection<AbstractItem> getItems(){
+        return items.values();
     }
 
     public static void load() {
