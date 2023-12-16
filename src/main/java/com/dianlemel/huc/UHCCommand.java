@@ -34,6 +34,10 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String s, String[] strings) {
+        if (!sender.isOp()) {
+            MessageUtil.sendError(sender, "你沒有使用該指令的權限");
+            return true;
+        }
         if (strings.length > 0) {
             try {
                 switch (strings[0]) {
@@ -155,6 +159,9 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender commandSender, Command command, String s, String[] strings) {
+        if (!commandSender.isOp()) {
+            return Lists.newArrayList();
+        }
         if (strings.length == 0) {
             return COMMANDS.values().stream().toList();
         }
