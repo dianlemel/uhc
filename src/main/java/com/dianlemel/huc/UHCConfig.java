@@ -13,6 +13,7 @@ public class UHCConfig {
 
     public static UHCConfig getInstance() {
         return Optional.ofNullable(config).orElseGet(() -> {
+            UHCCore.getPlugin().saveDefaultConfig();
             config = new UHCConfig();
             return config;
         });
@@ -39,26 +40,27 @@ public class UHCConfig {
     }
 
     public void loadConfig() {
+        UHCCore.getPlugin().reloadConfig();
         var plugin = UHCCore.getPlugin();
         var config = new MapData(plugin.getConfig().getValues(false));
         center = config.getLocation("center");
         deadMusic = config.getString("deadMusic");
         spawn = config.getRange("spawn");
 
-        var board = config.getMapData("board");
-        borderTimer = board.getInteger("time");
-        borderMinRadius = board.getInteger("minRadius");
-        borderMaxRadius = board.getInteger("maxRadius");
+        var border = config.getMapData("border");
+        borderTimer = border.getInteger("time");
+        borderMinRadius = border.getInteger("minRadius");
+        borderMaxRadius = border.getInteger("maxRadius");
 
         var start = config.getMapData("start");
-        progressiveTriggerRule = start.getInteger("progressiveTriggerRule");
         glowingTimer = start.getInteger("glowingTimer");
         spawnY = start.getInteger("spawnY");
         minDistance = start.getInteger("minDistance");
-        showNameTimer = start.getInteger("showIDTimer");
+        showNameTimer = start.getInteger("showNameTimer");
+        clearMonsterTimer = start.getInteger("clearMonsterTimer");
         var punished = start.getMapData("punished");
+        progressiveTriggerRule = punished.getInteger("progressiveTriggerRule");
         baselineThreshold = punished.getInteger("baselineThreshold");
-        clearMonsterTimer = punished.getInteger("clearMonsterTimer");
         punishedEffects = punished.getMapList("effects");
 
         specialItems = config.getMapList("specialItem");

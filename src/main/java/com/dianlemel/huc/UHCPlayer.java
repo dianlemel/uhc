@@ -7,6 +7,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.Map;
 import java.util.Optional;
@@ -31,9 +32,9 @@ public class UHCPlayer {
 
     private final UUID uuid;
     private final String name;
-    private Optional<Player> player;
+    private Optional<Player> player = Optional.empty();
     private boolean isDead = false;
-    private boolean isStart = false;
+    private boolean isInit = false;
     private Location deadLocation;
 
     private int blockBreakCount = 0;
@@ -44,10 +45,12 @@ public class UHCPlayer {
     }
 
     //遊戲開始
-    public void start() {
+    public void init() {
         setHealth(20);
         clearAllEffects();
-        isStart = true;
+        clearInventory();
+        setGameMode(GameMode.SURVIVAL);
+        isInit = true;
         isDead = false;
         deadLocation = null;
         blockBreakCount = 0;
@@ -55,19 +58,30 @@ public class UHCPlayer {
 
     //遊戲結束
     public void stop() {
-        isStart = false;
+        setHealth(20);
+        clearAllEffects();
+        clearInventory();
+        setGameMode(GameMode.ADVENTURE);
+        isInit = false;
         isDead = false;
         deadLocation = null;
-        clearAllEffects();
+    }
+
+    public void addPotionEffect(PotionEffect potionEffect) {
+        ifOnline(player -> player.addPotionEffect(potionEffect));
     }
 
     //清除所有效果
     public void clearAllEffects() {
-        ifOnline(player -> {
-            player.getActivePotionEffects().stream().map(PotionEffect::getType).forEach(player::removePotionEffect);
-        });
+        ifOnline(player -> player.getActivePotionEffects().stream().map(PotionEffect::getType).forEach(player::removePotionEffect));
     }
 
+    //清除背包
+    public void clearInventory() {
+        ifOnline(player -> player.getInventory().clear());
+    }
+
+    //設置寫量
     public void setHealth(double h) {
         BukkitUtil.setHealth(getPlayer(), h);
     }
@@ -128,8 +142,8 @@ public class UHCPlayer {
         isDead = dead;
     }
 
-    public boolean isStart() {
-        return isStart;
+    public boolean isInit() {
+        return isInit;
     }
 
     public Location getDeadLocation() {

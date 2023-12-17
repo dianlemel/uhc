@@ -96,7 +96,7 @@ public class Range {
             for (int j = 1; j <= 100; j++) {
                 var x = lowerLeft.getX() + random.nextDouble() * (upperRight.getX() - lowerLeft.getX());
                 var y = lowerLeft.getY() + random.nextDouble() * (upperRight.getY() - lowerLeft.getY());
-                var vector = new Vector(x, 0, y);
+                var vector = new Vector(x, defaultY, y);
                 if (points.stream().noneMatch(point -> point.distance(vector) < minDistance)) {
                     points.add(vector);
                     break;

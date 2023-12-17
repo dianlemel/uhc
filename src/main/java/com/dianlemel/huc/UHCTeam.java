@@ -8,6 +8,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Criteria;
+import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.RenderType;
 import org.bukkit.scoreboard.Team;
 
@@ -15,6 +16,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class UHCTeam {
+
+    private static final ChatColor[] colors = new ChatColor[]{
+            ChatColor.GREEN,
+            ChatColor.RED,
+            ChatColor.BLUE,
+            ChatColor.GOLD,
+            ChatColor.AQUA,
+            ChatColor.GRAY,
+            ChatColor.YELLOW,
+            ChatColor.BLACK
+    };
 
     private static final List<UHCTeam> teams = Lists.newArrayList();
 
@@ -31,17 +43,17 @@ public class UHCTeam {
     }
 
     //建立隊伍
-    public static void createTeam(int size) throws UHCException {
-        var colors = ChatColor.values();
+    public static int createTeam(int size) throws UHCException {
         if (colors.length < size) {
             throw new UHCException("達到隊伍建立數量上限");
         }
-        if (teams.isEmpty()) {
+        if (!teams.isEmpty()) {
             clearTeam();
         }
         for (var i = 0; i < size; i++) {
             teams.add(new UHCTeam(colors[i]));
         }
+        return teams.size();
     }
 
     //隨機分隊
@@ -67,7 +79,7 @@ public class UHCTeam {
             var team = teams.get(i++ % teams.size());
             team.joinPlayer(player);
         }
-        String msg = teams.stream().map(t -> String.format("%s%s%d", t.getColor().toString(), t.getColor().name(), t.size())).collect(Collectors.joining("§f , "));
+        String msg = teams.stream().map(t -> String.format("%s%s : %d", t.getColor().toString(), t.getColor().name(), t.size())).collect(Collectors.joining("§f , "));
         MessageUtil.broadcastInfo(msg);
     }
 
@@ -87,8 +99,14 @@ public class UHCTeam {
     }
 
     //踢出所有玩家，並清空所有隊伍
-    public static void clearTeam() {
-        teams.forEach(UHCTeam::kickAllPlayer);
+    public static void clearTeam() throws UHCException {
+        if (UHCController.getInstance().isRunning()) {
+            throw new UHCException("遊戲正在進行中");
+        }
+        teams.forEach(team -> {
+            team.kickAllPlayer();
+            team.unregisterTeamScoreboard();
+        });
         teams.clear();
     }
 
@@ -115,8 +133,13 @@ public class UHCTeam {
     //初始化隊伍記分板
     private void initTeamScoreboard() {
         //獲取主記分板
-        var scoreboard = Objects.requireNonNull(Bukkit.getServer().getScoreboardManager()).getMainScoreboard();
-        scoreboard.registerNewObjective("", Criteria.HEALTH, "", RenderType.HEARTS);
+        var scoreboard = Bukkit.getServer().getScoreboardManager().getMainScoreboard();
+        try {
+            scoreboard.registerNewObjective(color.name(), Criteria.HEALTH, color.name(), RenderType.HEARTS);
+        } catch (IllegalArgumentException e) {
+            scoreboard.getObjective(color.name()).unregister();
+            scoreboard.registerNewObjective(color.name(), Criteria.HEALTH, color.name(), RenderType.HEARTS);
+        }
         try {
             //註冊新的隊伍
             team = scoreboard.registerNewTeam(color.toString());
@@ -134,9 +157,15 @@ public class UHCTeam {
         team.setCanSeeFriendlyInvisibles(true);
     }
 
+    public void unregisterTeamScoreboard() {
+        var scoreboard = Bukkit.getServer().getScoreboardManager().getMainScoreboard();
+        Optional.ofNullable(scoreboard.getObjective(color.name())).ifPresent(Objective::unregister);
+        Optional.ofNullable(scoreboard.getTeam(color.toString())).ifPresent(Team::unregister);
+    }
+
     //隊伍成員數量
     public int size() {
-        return teams.size();
+        return players.size();
     }
 
     //判斷該隊伍是否沒有任何玩家
@@ -163,7 +192,7 @@ public class UHCTeam {
 
     //踢出所有玩家
     public void kickAllPlayer() {
-        players.forEach(this::kickPlayer);
+        Lists.newArrayList(players).forEach(this::kickPlayer);
     }
 
     //判斷該玩家是否在這隊伍
@@ -192,28 +221,22 @@ public class UHCTeam {
 
     //遊戲開始
     public void start() {
-        players.forEach(players -> {
-            if (players.isOnline()) {
-                players.start();
-                players.setGameMode(GameMode.SURVIVAL);
-                players.teleport(getStartSpawn());
-            }
+        players.stream().filter(UHCPlayer::isOnline).forEach(players -> {
+            players.init();
+            players.teleport(getStartSpawn());
         });
     }
 
     //遊戲結束
     public void stop() {
-        players.forEach(players -> {
-            if (players.isOnline()) {
-                players.stop();
-                players.setGameMode(GameMode.ADVENTURE);
-                players.teleport(UHCConfig.getInstance().getSpawn());
-            }
+        players.stream().filter(UHCPlayer::isOnline).forEach(players -> {
+            players.stop();
+            players.teleport(UHCConfig.getInstance().getSpawn());
         });
     }
 
     public boolean isAllDead() {
-        return players.stream().filter(UHCPlayer::isOnline).anyMatch(UHCPlayer::isDead);
+        return players.stream().filter(UHCPlayer::isOnline).filter(UHCPlayer::isInit).anyMatch(UHCPlayer::isDead);
     }
 
     public List<UHCPlayer> getPlayers() {

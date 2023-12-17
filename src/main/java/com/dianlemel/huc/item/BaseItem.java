@@ -7,10 +7,8 @@ import com.dianlemel.huc.util.MapData;
 import com.dianlemel.huc.util.MessageUtil;
 import com.google.common.collect.Maps;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -18,27 +16,25 @@ import org.bukkit.potion.PotionEffectType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
-public abstract class AbstractItem implements Listener {
+public abstract class BaseItem implements Listener {
 
     public enum ItemType {
         INSTANT_HEALTH_BOOK, LUCKY_BLOCK
     }
 
-    private static final Map<ItemType, Class<? extends AbstractItem>> register = Maps.newConcurrentMap();
-    private static final Map<String, AbstractItem> items = Maps.newConcurrentMap();
-    private static final UUID uuid = UUID.randomUUID();
+    private static final Map<ItemType, Class<? extends BaseItem>> register = Maps.newConcurrentMap();
+    private static final Map<String, BaseItem> items = Maps.newConcurrentMap();
 
-    public static AbstractItem getItem(String key) {
+    public static BaseItem getItem(String key) {
         return items.get(key);
     }
 
-    public static Collection<AbstractItem> getItems(){
+    public static Collection<BaseItem> getItems() {
         return items.values();
     }
 
-    public static void load() {
+    public static void loadItem() {
         clear();
 
         UHCConfig.getInstance().getSpecialItems().forEach(data -> {
@@ -50,11 +46,21 @@ public abstract class AbstractItem implements Listener {
                 try {
                     var item = classes.getDeclaredConstructor(MapData.class).newInstance(data);
                     items.put(item.getKey(), item);
-                    item.register();
+                    UHCCore.getPlugin().getServer().getPluginManager().registerEvents(item, UHCCore.getPlugin());
+                    item.register(data);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
+        });
+    }
+
+    public static void loadData() {
+        UHCConfig.getInstance().getSpecialItems().forEach(data -> {
+            var key = data.getString("key");
+            var item = items.get(key);
+            item.unregister();
+            item.register(data);
         });
     }
 
@@ -68,12 +74,12 @@ public abstract class AbstractItem implements Listener {
     }
 
     public static void clear() {
-        items.values().forEach(AbstractItem::unregister);
+        items.values().forEach(BaseItem::unregister);
         items.clear();
     }
 
     public static void initItems() {
-        items.values().forEach(AbstractItem::init);
+        items.values().forEach(BaseItem::init);
     }
 
     static {
@@ -81,7 +87,6 @@ public abstract class AbstractItem implements Listener {
         register.put(ItemType.LUCKY_BLOCK, LuckyBlock.class);
     }
 
-    protected final NamespacedKey recipeNamespacedKey;
     private final String key;
     private final String name;
     private final Material material;
@@ -89,32 +94,20 @@ public abstract class AbstractItem implements Listener {
     private final List<String> recipe;
     private final Map<String, Object> ingredient;
 
-    public AbstractItem(MapData data) {
+    public BaseItem(MapData data) {
         key = data.getString("key");
         name = data.getString("name");
         material = data.getMaterial("material");
         lore = data.getStringList("lore");
         recipe = data.getStringList("recipe");
         ingredient = data.getMap("ingredient");
-        recipeNamespacedKey = new NamespacedKey(UHCCore.getPlugin(), uuid + "_" + key);
     }
 
-    //註冊合成表
-    protected void register() {
-        var item = createItem();
-        var shapedRecipe = new ShapedRecipe(recipeNamespacedKey, item);
-        shapedRecipe.shape(this.recipe.toArray(new String[0]));
-        ingredient.forEach((k, m) -> {
-            shapedRecipe.setIngredient(k.charAt(0), Material.valueOf((String) m));
-        });
-        UHCCore.getPlugin().getServer().addRecipe(shapedRecipe);
-        UHCCore.getPlugin().getServer().getPluginManager().registerEvents(this, UHCCore.getPlugin());
-    }
+    //註冊
+    abstract void register(MapData data);
 
-    //移除合成表
-    protected void unregister() {
-        UHCCore.getPlugin().getServer().removeRecipe(recipeNamespacedKey);
-    }
+    //撤銷
+    abstract void unregister();
 
     //建立物品
     public ItemStack createItem() {

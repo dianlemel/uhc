@@ -186,6 +186,15 @@ public class MapData {
                     map.put(key1, value);
                 }
             });
+        } else if (object instanceof Map ms) {
+            ms.entrySet().forEach((e) -> {
+                var entry = (Map.Entry<String, Object>) e;
+                if (entry.getValue() instanceof MemorySection memorySection) {
+                    map.put(entry.getKey(), new MapData(memorySection));
+                } else {
+                    map.put(entry.getKey(), entry.getValue());
+                }
+            });
         }
         return map;
     }

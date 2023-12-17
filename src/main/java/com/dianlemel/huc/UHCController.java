@@ -1,6 +1,6 @@
 package com.dianlemel.huc;
 
-import com.dianlemel.huc.item.AbstractItem;
+import com.dianlemel.huc.item.BaseItem;
 import com.dianlemel.huc.util.BukkitUtil;
 import com.dianlemel.huc.util.LocationUtil;
 import com.dianlemel.huc.util.MessageUtil;
@@ -21,7 +21,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.RenderType;
@@ -48,7 +47,7 @@ public class UHCController implements Listener, Runnable {
 
     private boolean isRunning = false;
     private boolean spawnMonster = true;
-    private BukkitTask timer;
+    private boolean isInjuryExempt = false;
     private int time;
     private final World world;
 
@@ -103,12 +102,14 @@ public class UHCController implements Listener, Runnable {
         if (isRunning()) {
             throw new UHCException("遊戲正在進行中");
         }
+        isRunning = true;
+        isInjuryExempt = true;
         this.time = time;
         var config = UHCConfig.getInstance();
 
         //各隊伍重生點計算
         var center = config.getCenter();
-        var range = LocationUtil.calculate2DRange(center, UHCConfig.getInstance().getBorderMaxRadius());
+        var range = LocationUtil.calculate2DRange(center, UHCConfig.getInstance().getBorderMaxRadius() / 2);
         var minDistance = config.getMinDistance();
         var spawnY = config.getSpawnY();
         var teams = UHCTeam.getTeams();
@@ -133,12 +134,16 @@ public class UHCController implements Listener, Runnable {
         worldBorder.setWarningDistance(16);
         //邊界外持續受到傷害
         worldBorder.setDamageAmount(0.1);
+        //緩衝距離
+        worldBorder.setDamageBuffer(0);
 
+        //清除怪物
+        world.getLivingEntities().stream().filter(Enemy.class::isInstance).forEach(Entity::remove);
         //世界難度
         world.setDifficulty(Difficulty.HARD);
 
         //物品初始化
-        AbstractItem.initItems();
+        BaseItem.initItems();
 
         //隊伍開始
         UHCTeam.startAllTeam();
@@ -146,7 +151,11 @@ public class UHCController implements Listener, Runnable {
         MessageUtil.broadcastTitle("", "§6遊戲開始", 40, 40, 100);
 
         spawnMonster = true;
-        timer = TaskUtil.syncTimer(this, 20, 20);
+        TaskUtil.syncTimer(this, 20, 20);
+        TaskUtil.syncTaskLater(this::showName, config.getShowNameTimer() * 20L);
+        TaskUtil.syncTaskLater(() -> {
+            isInjuryExempt = false;
+        }, 100);
 
         //隱藏玩家名稱，只有隊伍自己人看得到
         UHCTeam.getTeams().forEach(team -> team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OTHER_TEAMS));
@@ -162,9 +171,6 @@ public class UHCController implements Listener, Runnable {
         }
         if (time == config.getGlowingTimer()) {
             glowingAllPlayer();
-        }
-        if (time == config.getShowNameTimer()) {
-            showName();
         }
         if (time == config.getBorderTimer()) {
             startBoard();
@@ -190,7 +196,7 @@ public class UHCController implements Listener, Runnable {
     private void clearMonster() {
         MessageUtil.broadcastInfo("清除怪物");
         spawnMonster = false;
-        world.getLivingEntities().stream().filter(Monster.class::isInstance).forEach(Entity::remove);
+        world.getLivingEntities().stream().filter(Enemy.class::isInstance).forEach(Entity::remove);
     }
 
     //所有生存模式下的玩家都發光
@@ -206,7 +212,7 @@ public class UHCController implements Listener, Runnable {
         }
         isRunning = false;
         //停止計時器
-        Optional.ofNullable(timer).ifPresent(BukkitTask::cancel);
+        TaskUtil.cancelAllTask();
         //重置世界邊界
         world.getWorldBorder().reset();
         //設置世界難度
@@ -271,7 +277,7 @@ public class UHCController implements Listener, Runnable {
     @EventHandler
     public void onEntitiesLoadEvent(EntitiesLoadEvent event) {
         if (!spawnMonster) {
-            event.getEntities().stream().filter(Monster.class::isInstance).forEach(Entity::remove);
+            event.getEntities().stream().filter(Enemy.class::isInstance).forEach(Entity::remove);
         }
     }
 
@@ -288,15 +294,18 @@ public class UHCController implements Listener, Runnable {
         //如果是鵝卵石、深板岩，增加挖礦次數
         switch (event.getBlock().getType()) {
             case COPPER_ORE:
-                event.setDropItems(true);
+            case DEEPSLATE_COPPER_ORE:
+                event.setDropItems(false);
                 world.dropItemNaturally(location, new ItemStack(Material.COPPER_INGOT));
                 break;
             case IRON_ORE:
-                event.setDropItems(true);
+            case DEEPSLATE_IRON_ORE:
+                event.setDropItems(false);
                 world.dropItemNaturally(location, new ItemStack(Material.IRON_INGOT));
                 break;
             case GOLD_ORE:
-                event.setDropItems(true);
+            case DEEPSLATE_GOLD_ORE:
+                event.setDropItems(false);
                 world.dropItemNaturally(location, new ItemStack(Material.GOLD_INGOT));
                 break;
             case STONE:
@@ -315,7 +324,7 @@ public class UHCController implements Listener, Runnable {
         if (count > config.getBaselineThreshold()) {
             count = -config.getBaselineThreshold();
             if (count % config.getProgressiveTriggerRule() == 0) {
-                var effect = AbstractItem.toEffect(BukkitUtil.random(config.getPunishedEffects()));
+                var effect = BaseItem.toEffect(BukkitUtil.random(config.getPunishedEffects()));
                 //給予效果
                 p.addPotionEffect(effect);
                 //清除所有鎬類
@@ -372,15 +381,22 @@ public class UHCController implements Listener, Runnable {
         });
     }
 
-    // 生物受到傷害
+    //生物受到傷害
     @EventHandler
-    public void onEntityDamageByEntityEvent(EntityDamageByEntityEvent event) {
+    public void onEntityDamageEvent(EntityDamageEvent event) {
         //如果不是玩家受到傷害
         if (!event.getEntity().getType().equals(EntityType.PLAYER)) {
             return;
         }
-        //遊戲尚未開始，阻止受到傷害
-        event.setCancelled(!isRunning());
+        //如果遊戲尚未進行
+        if (!isRunning()) {
+            event.setCancelled(true);
+            return;
+        }
+        //當傷害是摔傷，並且還是免於摔傷期間
+        if (EntityDamageEvent.DamageCause.FALL.equals(event.getCause()) && isInjuryExempt) {
+            event.setCancelled(true);
+        }
     }
 
     // 玩家重生
@@ -505,11 +521,11 @@ public class UHCController implements Listener, Runnable {
                 return;
             }
             //如果已經開始
-            if (player.isStart()) {
+            if (player.isInit()) {
                 return;
             }
-            //設置該玩家為生存模式
-            player.setGameMode(GameMode.SURVIVAL);
+            //初始化玩家
+            player.init();
             //取得遊戲開始重生點
             var spawn = Optional.ofNullable(team.getStartSpawn()).orElseGet(() -> {
                 //當取得不到重生點，至少給一開始進入伺服器的眾生點

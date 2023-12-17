@@ -20,21 +20,26 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-public class LuckyBlock extends AbstractItem {
+public class LuckyBlock extends RecipeItem {
 
 
     private static final Random random = new Random();
     private final List<Location> locationList = Lists.newArrayList();
-    private final List<RandomItem> items;
+    private List<RandomItem> items = Lists.newArrayList();
 
     public LuckyBlock(MapData data) {
         super(data);
-        items = data.getMapList("randomItem").stream().map(RandomItem::new).collect(Collectors.toList());
     }
 
     @Override
     public ItemType getType() {
         return ItemType.LUCKY_BLOCK;
+    }
+
+    @Override
+    protected void register(MapData data) {
+        super.register(data);
+        items = data.getMapList("randomItem").stream().map(RandomItem::new).collect(Collectors.toList());
     }
 
     @Override
@@ -87,7 +92,10 @@ public class LuckyBlock extends AbstractItem {
     public void onBlockPlaceEvent(BlockPlaceEvent event) {
         //如果遊戲尚未開始
         if (!UHCController.getInstance().isRunning()) {
-            return;
+            var player = event.getPlayer();
+            if (!player.isOp()) {
+                return;
+            }
         }
         //如果不是主手
         if (!EquipmentSlot.HAND.equals(event.getHand())) {
@@ -112,16 +120,19 @@ public class LuckyBlock extends AbstractItem {
     public void onBlockBreakEvent(BlockBreakEvent event) {
         //如果遊戲尚未開始
         if (!UHCController.getInstance().isRunning()) {
-            return;
+            var player = event.getPlayer();
+            if (!player.isOp()) {
+                return;
+            }
         }
+        //獲得該方塊位置
+        var location = event.getBlock().getLocation();
         //如果該方塊位置不是特殊方塊
-        if (locationList.remove(event.getBlock().getLocation())) {
+        if (!locationList.remove(event.getBlock().getLocation())) {
             return;
         }
         //阻止該方塊掉落任何物品
         event.setDropItems(false);
-        //獲得該方塊位置
-        var location = event.getBlock().getLocation();
         //獲得該位置的世界
         var world = location.getWorld();
         //過濾所有中獎的RandomItem，並且生成物品

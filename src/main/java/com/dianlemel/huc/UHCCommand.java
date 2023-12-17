@@ -1,6 +1,6 @@
 package com.dianlemel.huc;
 
-import com.dianlemel.huc.item.AbstractItem;
+import com.dianlemel.huc.item.BaseItem;
 import com.dianlemel.huc.util.MessageUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -13,8 +13,8 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class UHCCommand implements CommandExecutor, TabCompleter {
 
@@ -30,6 +30,7 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
         COMMANDS.put("join", "<隊伍> <玩家...> 玩家加入該隊伍");
         COMMANDS.put("leave", "<隊伍> <玩家...> 該隊伍踢除玩家");
         COMMANDS.put("give", "<物品KEY> 獲取特殊物品");
+        COMMANDS.put("reload", "重新讀取設定");
     }
 
     @Override
@@ -41,6 +42,11 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
         if (strings.length > 0) {
             try {
                 switch (strings[0]) {
+                    case "reload":
+                        UHCConfig.getInstance().loadConfig();
+                        BaseItem.loadData();
+                        MessageUtil.sendInfo(sender, "重新讀取完成");
+                        return true;
                     case "start":
                         if (strings.length == 2) {
                             try {
@@ -55,6 +61,7 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
                     case "stop":
                         if (strings.length == 1) {
                             UHCController.getInstance().stop(null);
+                            return true;
                         }
                         if (strings.length == 2) {
                             try {
@@ -70,7 +77,8 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
                         if (strings.length == 2) {
                             try {
                                 var size = Integer.parseInt(strings[1]);
-                                UHCTeam.createTeam(size);
+                                size = UHCTeam.createTeam(size);
+                                MessageUtil.sendInfo(sender, String.format("已成功建立 %d 組隊伍", size));
                                 return true;
                             } catch (NumberFormatException e) {
                                 MessageUtil.sendError(sender, e.getMessage());
@@ -79,12 +87,14 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
                         break;
                     case "clearTeam":
                         UHCTeam.clearTeam();
+                        MessageUtil.sendInfo(sender, "隊伍清除完成");
                         return true;
                     case "random":
                         if (strings.length == 2) {
                             try {
                                 var kickAll = Boolean.parseBoolean(strings[1]);
                                 UHCTeam.random(kickAll);
+                                MessageUtil.sendInfo(sender, "已成功隨機分隊");
                                 return true;
                             } catch (NumberFormatException e) {
                                 MessageUtil.sendError(sender, e.getMessage());
@@ -117,7 +127,7 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
                                     .map(UHCPlayer::getUHCPlayer)
                                     .filter(Objects::nonNull)
                                     .forEach(player -> {
-                                        if (team.inTeam(player.getUuid())) {
+                                        if (!team.inTeam(player.getUuid())) {
                                             MessageUtil.sendError(sender, String.format("%s 不再隊伍裡", player.getName()));
                                         } else {
                                             team.kickPlayer(player);
@@ -130,10 +140,11 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
                     case "give":
                         if (strings.length == 2) {
                             if (sender instanceof Player player) {
-                                var abstractItem = AbstractItem.getItem(strings[1]);
+                                var abstractItem = BaseItem.getItem(strings[1]);
                                 if (abstractItem != null) {
                                     var item = abstractItem.createItem();
                                     player.getInventory().addItem(item);
+                                    MessageUtil.sendInfo(sender, "已成功創建物品");
                                 } else {
                                     MessageUtil.sendError(sender, String.format("無此 %s 編號", strings[1]));
                                 }
@@ -163,18 +174,18 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
             return Lists.newArrayList();
         }
         if (strings.length == 0) {
-            return COMMANDS.values().stream().toList();
+            return COMMANDS.keySet().stream().toList();
         }
         if (strings.length == 1) {
-            return COMMANDS.values().stream().filter(c -> c.startsWith(strings[0])).collect(Collectors.toList());
+            return COMMANDS.keySet().stream().filter(c -> c.startsWith(strings[0])).collect(Collectors.toList());
         }
         if (strings.length == 2) {
             switch (strings[0]) {
                 case "random":
                     return ON_OFF.stream().filter(c -> c.startsWith(strings[1])).collect(Collectors.toList());
                 case "give":
-                    return AbstractItem.getItems().stream()
-                            .map(AbstractItem::getKey)
+                    return BaseItem.getItems().stream()
+                            .map(BaseItem::getKey)
                             .filter(c -> c.startsWith(strings[1]))
                             .collect(Collectors.toList());
                 case "join":
@@ -186,28 +197,35 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
                             .collect(Collectors.toList());
             }
         }
-        if (strings[0].equals("join")) {
-            var team = UHCTeam.getTeam(strings[1]);
-            if (team != null) {
-                var players = Bukkit.getOnlinePlayers();
-                var lastInput = strings[strings.length - 1];
-                return players.stream()
-                        .map(Player::getName)
-                        .filter(team::inTeam)
-                        .filter(name -> name.startsWith(lastInput))
-                        .collect(Collectors.toList());
-            }
-        }
-        if (strings[0].equals("leave")) {
-            var team = UHCTeam.getTeam(strings[1]);
-            if (team != null) {
-                var players = team.getPlayers();
-                var lastInput = strings[strings.length - 1];
-                return players.stream()
-                        .map(UHCPlayer::getName)
-                        .filter(name -> name.startsWith(lastInput))
-                        .collect(Collectors.toList());
-            }
+
+        switch (strings[0]) {
+            case "join":
+                var joinTeam = UHCTeam.getTeam(strings[1]);
+                if (joinTeam != null) {
+                    var players = Bukkit.getOnlinePlayers();
+                    var joinList = Arrays.stream(strings).skip(2).toList();
+                    var lastInput = strings[strings.length - 1];
+                    return players.stream()
+                            .map(Player::getName)
+                            .filter(Predicate.not(joinTeam::inTeam))
+                            .filter(Predicate.not(joinList::contains))
+                            .filter(name -> name.startsWith(lastInput))
+                            .collect(Collectors.toList());
+                }
+                break;
+            case "leave":
+                var leaveTeam = UHCTeam.getTeam(strings[1]);
+                if (leaveTeam != null) {
+                    var players = leaveTeam.getPlayers();
+                    var leaveList = Arrays.stream(strings).skip(2).toList();
+                    var lastInput = strings[strings.length - 1];
+                    return players.stream()
+                            .map(UHCPlayer::getName)
+                            .filter(name -> name.startsWith(lastInput))
+                            .filter(Predicate.not(leaveList::contains))
+                            .collect(Collectors.toList());
+                }
+                break;
         }
         return Lists.newArrayList();
     }

@@ -1,31 +1,40 @@
 package com.dianlemel.huc.item;
 
 import com.dianlemel.huc.UHCController;
+import com.dianlemel.huc.UHCCore;
 import com.dianlemel.huc.util.BukkitUtil;
 import com.dianlemel.huc.util.ItemUtil;
 import com.dianlemel.huc.util.MapData;
+import com.google.common.collect.Lists;
+import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.potion.PotionEffect;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class InstantHealthBook extends AbstractItem {
+public class InstantHealthBook extends RecipeItem {
 
     private final int health;
-    private final List<PotionEffect> effects;
+    private List<PotionEffect> effects = Lists.newArrayList();
 
     public InstantHealthBook(MapData data) {
         super(data);
         health = data.getInteger("health");
-        effects = data.getMapList("effects").stream().map(AbstractItem::toEffect).collect(Collectors.toList());
     }
 
     @Override
     public ItemType getType() {
         return ItemType.INSTANT_HEALTH_BOOK;
+    }
+
+    @Override
+    protected void register(MapData data) {
+        super.register(data);
+        effects = data.getMapList("effects").stream().map(BaseItem::toEffect).collect(Collectors.toList());
     }
 
     @Override
@@ -36,9 +45,13 @@ public class InstantHealthBook extends AbstractItem {
     //玩家互動
     @EventHandler
     public void onPlayerInteractEvent(PlayerInteractEvent event) {
+        //取得互動玩家
+        var player = event.getPlayer();
         //如果遊戲尚未開始
         if (!UHCController.getInstance().isRunning()) {
-            return;
+            if (!player.isOp()) {
+                return;
+            }
         }
         //如果不是主手
         if (!EquipmentSlot.HAND.equals(event.getHand())) {
@@ -53,13 +66,11 @@ public class InstantHealthBook extends AbstractItem {
         //取得該物品的KEY
         var key = ItemUtil.getKey(item);
         //如果不是自定義物品
-        if (getKey().equals(key)) {
+        if (!getKey().equals(key)) {
             return;
         }
         //減少一個或移除
         item.setAmount(item.getAmount() - 1);
-        //取得互動玩家
-        var player = event.getPlayer();
         //給予該玩家所有效果
         effects.forEach(player::addPotionEffect);
         //恢復血量
