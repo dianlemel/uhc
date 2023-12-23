@@ -4,8 +4,8 @@ center: world,-7,-60,-5
 deadMusic: 'minecraft:block.anvil.place'
 #重生點範圍
 spawn:
-  R1: world,1,-53,-1
-  R2: world,-16,-53,-16
+  R1: world,-2,-53,-2
+  R2: world,-15,-53,-15
 #邊界
 border:
   #剩餘幾秒開始縮圈置最小範圍(秒)
@@ -21,17 +21,17 @@ start:
   #每隊重生初始高度
   spawnY: 0
   #開始遊戲幾秒後顯示名稱
-  showNameTimer: 60
+  showNameTimer: 20
   #剩餘幾秒後清除怪物(秒)
-  clearMonsterTimer: 180
+  clearMonsterTimer: 240
   #剩餘幾秒後全體玩家發光(秒)
-  glowingTimer: 120
+  glowingTimer: 180
   #礦物懲罰
   punished:
     #最低礦物
-    baselineThreshold: 5
+    baselineThreshold: 800
     #每多少個礦物隨機給予狀態
-    progressiveTriggerRule: 1
+    progressiveTriggerRule: 100
     #效果清單
     effects:
       #效果名稱
@@ -72,7 +72,7 @@ specialItem:
       A: GOLD_INGOT
       B: PLAYER_HEAD
     #恢復血量
-    health: 10
+    health: 0
     #獲得效果
     effects:
       #效果名稱
@@ -81,6 +81,12 @@ specialItem:
         level: 0
         #效果時間(秒)
         time: 6
+        #效果名稱
+      - name: REGENERATION
+        #效果等級
+        level: 2
+        #效果時間(秒)
+        time: 5
   - type: LUCKY_BLOCK
     key: lb
     name: 禮物箱

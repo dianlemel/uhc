@@ -34,7 +34,7 @@ import static java.util.function.Predicate.not;
 public class UHCController implements Listener, Runnable {
 
     private static final String HEALTH_PLAYER_LIST = "HEALTH_PLAYER_LIST";
-    private static final String HEALTH_BELOW_NAME = "BELOW_NAME";
+    private static final String HEALTH_BELOW_NAME = "❤";
 
     private static UHCController controller;
 
@@ -77,7 +77,7 @@ public class UHCController implements Listener, Runnable {
         world.setPVP(true);//可以PVP
         world.setDifficulty(Difficulty.HARD);//難度最難
         world.setClearWeatherDuration(9999);//設定晴朗天氣
-        world.setTime(12000);//設置時間為中午12點
+        world.setTime(6000);//設置時間為中午12點
         world.setDifficulty(Difficulty.PEACEFUL);//設置和平模式
 
         world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);//死亡自動重生
@@ -179,6 +179,7 @@ public class UHCController implements Listener, Runnable {
 
     //開始縮圈
     private void startBoard() {
+        BukkitUtil.playSoundToAll(Sound.BLOCK_ANVIL_PLACE, 1f, 0);
         MessageUtil.broadcastInfo("開始縮圈");
         var worldBorder = world.getWorldBorder();
         var config = UHCConfig.getInstance();
@@ -188,12 +189,14 @@ public class UHCController implements Listener, Runnable {
 
     //顯示玩家名稱，可以看得到敵方
     private void showName() {
+        BukkitUtil.playSoundToAll(Sound.BLOCK_ANVIL_PLACE, 1f, 0);
         MessageUtil.broadcastInfo("現在可以看得到敵方名稱");
         UHCTeam.getTeams().forEach(team -> team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS));
     }
 
     //清除所有怪物
     private void clearMonster() {
+        BukkitUtil.playSoundToAll(Sound.BLOCK_ANVIL_PLACE, 1f, 0);
         MessageUtil.broadcastInfo("清除怪物");
         spawnMonster = false;
         world.getLivingEntities().stream().filter(Enemy.class::isInstance).forEach(Entity::remove);
@@ -201,8 +204,9 @@ public class UHCController implements Listener, Runnable {
 
     //所有生存模式下的玩家都發光
     private void glowingAllPlayer() {
+        BukkitUtil.playSoundToAll(Sound.BLOCK_ANVIL_PLACE, 1f, 0);
         MessageUtil.broadcastInfo("所有玩家發光");
-        BukkitUtil.getPlayers(world, GameMode.SURVIVAL).forEach(player -> player.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, UHCConfig.getInstance().getShowNameTimer() * 20, 0)));
+        BukkitUtil.getPlayers(world, GameMode.SURVIVAL).forEach(player -> player.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 999999, 0)));
     }
 
     //遊戲結束
@@ -261,6 +265,16 @@ public class UHCController implements Listener, Runnable {
             switch (itemStack.getType()) {
                 case POTATO:
                     itemStack.setType(Material.BAKED_POTATO);
+                    break;
+                case RAW_COPPER:
+                    itemStack.setType(Material.COPPER_INGOT);
+                    break;
+                case RAW_IRON:
+                    itemStack.setType(Material.IRON_INGOT);
+                    break;
+                case RAW_GOLD:
+                    itemStack.setType(Material.GOLD_INGOT);
+                    break;
             }
             return;
         }
@@ -288,30 +302,10 @@ public class UHCController implements Listener, Runnable {
         if (!isRunning()) {
             return;
         }
-        var world = event.getBlock().getWorld();
-        var location = event.getBlock().getLocation();
-        //如果是鐵礦、銅礦、金礦，需要阻止他噴出來，並噴出對應的錠
-        //如果是鵝卵石、深板岩，增加挖礦次數
-        switch (event.getBlock().getType()) {
-            case COPPER_ORE:
-            case DEEPSLATE_COPPER_ORE:
-                event.setDropItems(false);
-                world.dropItemNaturally(location, new ItemStack(Material.COPPER_INGOT));
-                break;
-            case IRON_ORE:
-            case DEEPSLATE_IRON_ORE:
-                event.setDropItems(false);
-                world.dropItemNaturally(location, new ItemStack(Material.IRON_INGOT));
-                break;
-            case GOLD_ORE:
-            case DEEPSLATE_GOLD_ORE:
-                event.setDropItems(false);
-                world.dropItemNaturally(location, new ItemStack(Material.GOLD_INGOT));
-                break;
-            case STONE:
-            case DEEPSLATE:
-                onBlockBreakCount(event.getPlayer());
-                break;
+        var type = event.getBlock().getType();
+        if (Material.STONE.equals(type) || Material.DEEPSLATE.equals(type)) {
+            //如果是鵝卵石、深板岩，增加挖礦次數
+            onBlockBreakCount(event.getPlayer());
         }
     }
 
@@ -421,18 +415,26 @@ public class UHCController implements Listener, Runnable {
                 }
             }, 100);
         }
-        //取得死亡位置
-        var spawn = Optional.ofNullable(player.getDeadLocation()).orElse(UHCConfig.getInstance().getSpawn());
-        //將玩家進入觀察者模式
-        player.setGameMode(GameMode.SPECTATOR);
-        //設置重生點
-        event.setRespawnLocation(spawn);
+        player.setGameMode(GameMode.CREATIVE);
+        event.setRespawnLocation(UHCConfig.getInstance().getSpawn());
+        TaskUtil.syncTask(() -> {
+            if (isRunning()) {
+                var spawn = Optional.ofNullable(player.getDeadLocation()).orElse(UHCConfig.getInstance().getSpawn());
+                player.teleport(spawn);
+                player.setGameMode(GameMode.SPECTATOR);
+            }
+        }, 10);
+
     }
 
     // 生物回血
     @EventHandler
     public void onEntityRegainHealthEvent(EntityRegainHealthEvent event) {
-        //遊戲開始，阻止自然回血
+        //允許藥水回血
+        if (EntityRegainHealthEvent.RegainReason.MAGIC.equals(event.getRegainReason()) || EntityRegainHealthEvent.RegainReason.MAGIC_REGEN.equals(event.getRegainReason())) {
+            return;
+        }
+        //遊戲開始，阻止所有回血
         event.setCancelled(isRunning());
     }
 

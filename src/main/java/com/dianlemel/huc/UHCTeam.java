@@ -236,7 +236,7 @@ public class UHCTeam {
     }
 
     public boolean isAllDead() {
-        return players.stream().filter(UHCPlayer::isOnline).filter(UHCPlayer::isInit).anyMatch(UHCPlayer::isDead);
+        return players.stream().filter(UHCPlayer::isOnline).filter(UHCPlayer::isInit).allMatch(UHCPlayer::isDead);
     }
 
     public List<UHCPlayer> getPlayers() {

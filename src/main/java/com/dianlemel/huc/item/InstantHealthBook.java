@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 public class InstantHealthBook extends RecipeItem {
 
-    private final int health;
+    private int health;
     private List<PotionEffect> effects = Lists.newArrayList();
 
     public InstantHealthBook(MapData data) {
@@ -34,6 +34,7 @@ public class InstantHealthBook extends RecipeItem {
     @Override
     protected void register(MapData data) {
         super.register(data);
+        health = data.getInteger("health");
         effects = data.getMapList("effects").stream().map(BaseItem::toEffect).collect(Collectors.toList());
     }
 

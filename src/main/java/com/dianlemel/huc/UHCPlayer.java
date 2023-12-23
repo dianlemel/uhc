@@ -49,6 +49,7 @@ public class UHCPlayer {
         setHealth(20);
         clearAllEffects();
         clearInventory();
+        setFoodLevel(20);
         setGameMode(GameMode.SURVIVAL);
         isInit = true;
         isDead = false;
@@ -61,10 +62,17 @@ public class UHCPlayer {
         setHealth(20);
         clearAllEffects();
         clearInventory();
+        setFoodLevel(20);
         setGameMode(GameMode.ADVENTURE);
         isInit = false;
         isDead = false;
         deadLocation = null;
+    }
+
+    public void setFoodLevel(int value){
+        ifOnline(player -> {
+            player.setFoodLevel(value);
+        });
     }
 
     public void addPotionEffect(PotionEffect potionEffect) {

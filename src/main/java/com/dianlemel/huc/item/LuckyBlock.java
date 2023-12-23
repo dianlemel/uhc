@@ -175,6 +175,7 @@ public class LuckyBlock extends RecipeItem {
                     potionMeta.addCustomEffect(effect, true);
                 });
             }
+            item.setItemMeta(itemMeta);
             item.setAmount(amount);
             return item;
         }
