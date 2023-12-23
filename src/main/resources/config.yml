@@ -10,10 +10,10 @@ spawn:
 border:
   #剩餘幾秒開始縮圈置最小範圍(秒)
   time: 60
-  #縮圈至指定範圍(半徑)
-  minRadius: 8
-  #遊戲開始最大範圍(半徑)
-  maxRadius: 24
+  #縮圈至指定範圍(直徑)
+  minRadius: 16
+  #遊戲開始最大範圍(直徑)
+  maxRadius: 48
 #遊戲開始設定
 start:
   #每隊重生的最小距離
@@ -29,12 +29,12 @@ start:
   #礦物懲罰
   punished:
     #最低礦物
-    baselineThreshold: 800
+    baselineThreshold: 5
     #每多少個礦物隨機給予狀態
-    progressiveTriggerRule: 100
+    progressiveTriggerRule: 1
     #效果清單
     effects:
-        #效果名稱
+      #效果名稱
       - name: GLOWING
         #效果等級
         level: 0
@@ -51,7 +51,7 @@ start:
         time: 30
 #特殊物品
 specialItem:
-    #種類
+  #種類
   - type: INSTANT_HEALTH_BOOK
     #編號
     key: ihb
@@ -75,7 +75,7 @@ specialItem:
     health: 10
     #獲得效果
     effects:
-        #效果名稱
+      #效果名稱
       - name: ABSORPTION
         #效果等級
         level: 0
@@ -96,6 +96,142 @@ specialItem:
       B: CHEST
     #隨機物品
     randomItem:
-      - material: GOLD_INGOT
-        chance: 100
+      - material: STONE
+        chance: 4
+        amount: 64
+      - material: SPRUCE_PLANKS
+        chance: 4
+        amount: 16
+      - material: APPLE
+        chance: 3
+        amount: 8
+      - material: LAPIS_LAZULI
+        chance: 3
+        amount: 16
+      - material: COAL
+        chance: 3
+        amount: 16
+      - material: IRON_INGOT
+        chance: 3
+        amount: 16
+      - material: LEATHER_CHESTPLATE
+        chance: 3
         amount: 1
+      - material: LEATHER
+        chance: 3
+        amount: 1
+      - material: WOODEN_SWORD
+        chance: 3
+        amount: 1
+      - material: STONE_SWORD
+        chance: 3
+        amount: 1
+      - material: GOLDEN_SWORD
+        chance: 3
+        amount: 1
+      - material: IRON_SWORD
+        chance: 3
+        amount: 1
+      - material: BOW
+        chance: 3
+        amount: 1
+      - material: ARROW
+        chance: 3
+        amount: 32
+      - material: COPPER_INGOT
+        chance: 3
+        amount: 16
+      - material: REDSTONE
+        chance: 3
+        amount: 16
+      - material: COOKED_BEEF
+        chance: 3
+        amount: 16
+      - material: ROTTEN_FLESH
+        chance: 3
+        amount: 16
+      - material: FISHING_ROD
+        chance: 3
+        amount: 1
+      - material: PAPER
+        chance: 3
+        amount: 16
+      - material: CAKE
+        chance: 3
+        amount: 1
+      - material: WATER_BUCKET
+        chance: 3
+        amount: 1
+      - material: BONE_MEAL
+        chance: 3
+        amount: 16
+      - material: STRING
+        chance: 3
+        amount: 16
+      - material: HORSE_SPAWN_EGG
+        chance: 2
+        amount: 1
+      - material: IRON_CHESTPLATE
+        chance: 2
+        amount: 1
+      - material: POTION
+        chance: 2
+        amount: 1
+        effects:
+          - name: SPEED
+            level: 0
+            time: 30
+      - material: SPLASH_POTION
+        chance: 2
+        amount: 1
+        effects:
+          - name: WEAKNESS
+            level: 0
+            time: 20
+      - material: POTION
+        chance: 2
+        amount: 1
+        effects:
+          - name: JUMP
+            level: 0
+            time: 30
+      - material: ENDER_PEARL
+        chance: 2
+        amount: 2
+      - material: OBSIDIAN
+        chance: 2
+        amount: 4
+      - material: GOLDEN_CHESTPLATE
+        chance: 2
+        amount: 1
+      - material: GOLD_INGOT
+        chance: 2
+        amount: 8
+      - material: DIAMOND
+        chance: 1
+        amount: 4
+      - material: LAVA_BUCKET
+        chance: 1
+        amount: 1
+      - material: DIAMOND_CHESTPLATE
+        chance: 1
+        amount: 1
+      - material: GOLDEN_APPLE
+        chance: 1
+        amount: 1
+      - material: DIAMOND_SWORD
+        chance: 1
+        amount: 1
+      - material: TNT
+        chance: 1
+        amount: 1
+      - material: CREEPER_SPAWN_EGG
+        chance: 1
+        amount: 1
+      - material: POTION
+        chance: 1
+        amount: 1
+        effects:
+          - name: HEAL
+            level: 0
+            time: 1

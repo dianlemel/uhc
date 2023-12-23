@@ -14,6 +14,7 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.util.Vector;
 
 import java.util.List;
@@ -150,11 +151,14 @@ public class LuckyBlock extends RecipeItem {
         private final Material material;
         //數量
         private final int amount;
+        //原始資料
+        private final MapData mapData;
 
         RandomItem(MapData mapData) {
             chance = mapData.getInteger("chance");
             material = mapData.getMaterial("material");
             amount = mapData.getInteger("amount");
+            this.mapData = mapData;
         }
 
         //是否中獎
@@ -164,7 +168,13 @@ public class LuckyBlock extends RecipeItem {
 
         //新的物品
         ItemStack create() {
-            ItemStack item = new ItemStack(material);
+            var item = new ItemStack(material);
+            var itemMeta = item.getItemMeta();
+            if (itemMeta instanceof PotionMeta potionMeta && mapData.containsKey("effects")) {
+                mapData.getMapList("effects").stream().map(BaseItem::toEffect).forEach(effect -> {
+                    potionMeta.addCustomEffect(effect, true);
+                });
+            }
             item.setAmount(amount);
             return item;
         }
