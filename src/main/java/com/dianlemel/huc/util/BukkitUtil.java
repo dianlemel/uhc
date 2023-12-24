@@ -1,11 +1,12 @@
 package com.dianlemel.huc.util;
 
-import com.dianlemel.huc.UHCException;
 import com.google.common.collect.Lists;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredListener;
 
 import java.util.List;
@@ -73,22 +74,6 @@ public class BukkitUtil {
 
     public static boolean isMainThread() {
         return Bukkit.isPrimaryThread();
-    }
-
-    public static void runMainThread(Runnable runnable) {
-        if (!isMainThread()) {
-            TaskUtil.syncTask(runnable);
-            return;
-        }
-        runnable.run();
-    }
-
-    public static Plugin getPlugin(String name) throws Exception {
-        Plugin plugin = Bukkit.getPluginManager().getPlugin(name);
-        if (plugin == null) {
-            throw new UHCException("尚未安裝 " + name);
-        }
-        return plugin;
     }
 
     public static void playSoundToAll(String sound, float volume, float pitch) {

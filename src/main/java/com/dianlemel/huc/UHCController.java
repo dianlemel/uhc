@@ -5,6 +5,7 @@ import com.dianlemel.huc.util.BukkitUtil;
 import com.dianlemel.huc.util.LocationUtil;
 import com.dianlemel.huc.util.MessageUtil;
 import com.dianlemel.huc.util.TaskUtil;
+import net.md_5.bungee.api.chat.ComponentBuilder;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -34,7 +35,7 @@ import static java.util.function.Predicate.not;
 public class UHCController implements Listener, Runnable {
 
     private static final String HEALTH_PLAYER_LIST = "HEALTH_PLAYER_LIST";
-    private static final String HEALTH_BELOW_NAME = "❤";
+    private static final String HEALTH_BELOW_NAME = ChatColor.RED + "❤";
 
     private static UHCController controller;
 
@@ -48,6 +49,9 @@ public class UHCController implements Listener, Runnable {
     private boolean isRunning = false;
     private boolean spawnMonster = true;
     private boolean isInjuryExempt = false;
+    private int clearMonsterTimer = 0;
+    private int glowingTimer = 0;
+    private int borderTimer = 0;
     private int time;
     private final World world;
 
@@ -92,7 +96,7 @@ public class UHCController implements Listener, Runnable {
     }
 
     //遊戲開始
-    public void start(int time) throws UHCException {
+    public void start(int time, int showNameTimer, int clearMonsterTimer, int glowingTimer, int borderTimer) throws UHCException {
         if (UHCTeam.getTeams().isEmpty()) {
             throw new UHCException("尚未建立隊伍");
         }
@@ -104,6 +108,9 @@ public class UHCController implements Listener, Runnable {
         }
         isRunning = true;
         isInjuryExempt = true;
+        this.clearMonsterTimer = clearMonsterTimer;
+        this.glowingTimer = glowingTimer;
+        this.borderTimer = borderTimer;
         this.time = time;
         var config = UHCConfig.getInstance();
 
@@ -152,10 +159,15 @@ public class UHCController implements Listener, Runnable {
 
         spawnMonster = true;
         TaskUtil.syncTimer(this, 20, 20);
-        TaskUtil.syncTaskLater(this::showName, config.getShowNameTimer() * 20L);
+        TaskUtil.syncTaskLater(this::showName, showNameTimer * 20L);
         TaskUtil.syncTaskLater(() -> {
             isInjuryExempt = false;
         }, 100);
+
+        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，開始顯示玩家ID", showNameTimer));
+        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，清除怪物", clearMonsterTimer));
+        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，全體發光", glowingTimer));
+        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，開始縮圈", borderTimer));
 
         //隱藏玩家名稱，只有隊伍自己人看得到
         UHCTeam.getTeams().forEach(team -> team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OTHER_TEAMS));
@@ -165,14 +177,14 @@ public class UHCController implements Listener, Runnable {
     @Override
     public void run() {
         time--;
-        var config = UHCConfig.getInstance();
-        if (time == config.getClearMonsterTimer()) {
+        MessageUtil.sendActionBarToAll(new ComponentBuilder("剩餘時間: " + time).color(net.md_5.bungee.api.ChatColor.BOLD).create());
+        if (time == clearMonsterTimer) {
             clearMonster();
         }
-        if (time == config.getGlowingTimer()) {
+        if (time == glowingTimer) {
             glowingAllPlayer();
         }
-        if (time == config.getBorderTimer()) {
+        if (time == borderTimer) {
             startBoard();
         }
     }
@@ -199,7 +211,9 @@ public class UHCController implements Listener, Runnable {
         BukkitUtil.playSoundToAll(Sound.BLOCK_ANVIL_PLACE, 1f, 0);
         MessageUtil.broadcastInfo("清除怪物");
         spawnMonster = false;
-        world.getLivingEntities().stream().filter(Enemy.class::isInstance).forEach(Entity::remove);
+        var config = UHCConfig.getInstance();
+        var range = LocationUtil.calculate2DRange(config.getCenter(), UHCConfig.getInstance().getBorderMaxRadius() / 2);
+        world.getLivingEntities().stream().filter(Enemy.class::isInstance).filter(e -> range.inRange(e.getLocation(), true)).forEach(Entity::remove);
     }
 
     //所有生存模式下的玩家都發光
@@ -243,7 +257,7 @@ public class UHCController implements Listener, Runnable {
         }, 20);
     }
 
-    // 天氣改變
+    //天氣改變
     @EventHandler
     public void onWeatherChangeEvent(WeatherChangeEvent event) {
         //阻止天氣改變
@@ -262,6 +276,7 @@ public class UHCController implements Listener, Runnable {
         if (entity instanceof Item item) {
             //取得該掉落物的種類
             var itemStack = item.getItemStack();
+            //替換物品
             switch (itemStack.getType()) {
                 case POTATO:
                     itemStack.setType(Material.BAKED_POTATO);
@@ -276,22 +291,44 @@ public class UHCController implements Listener, Runnable {
                     itemStack.setType(Material.GOLD_INGOT);
                     break;
             }
+        }
+    }
+
+    //生物生成
+    @EventHandler
+    public void onCreatureSpawnEvent(CreatureSpawnEvent event) {
+        //遊戲尚未開始，不進行處理
+        if (!isRunning()) {
             return;
         }
-        //如果是怪物
-        if (entity instanceof Monster) {
-            //是否要阻止生成怪物
-            if (!spawnMonster) {
-                entity.remove();
+        //當還沒開始阻止生成怪物
+        if (spawnMonster) {
+            return;
+        }
+        var entity = event.getEntity();
+        //如果是敵方生物
+        if (entity instanceof Enemy) {
+            //如果是怪物蛋生成
+            if (CreatureSpawnEvent.SpawnReason.SPAWNER_EGG.equals(event.getSpawnReason())) {
+                return;
             }
+            entity.remove();
         }
     }
 
     //當chunk被載入的時候，再該chunk的生物也會被載入
     @EventHandler
     public void onEntitiesLoadEvent(EntitiesLoadEvent event) {
+        //遊戲尚未開始，不進行處理
+        if (!isRunning()) {
+            return;
+        }
         if (!spawnMonster) {
-            event.getEntities().stream().filter(Enemy.class::isInstance).forEach(Entity::remove);
+            var config = UHCConfig.getInstance();
+            var range = LocationUtil.calculate2DRange(config.getCenter(), UHCConfig.getInstance().getBorderMaxRadius() / 2);
+            if (range.inChunk(event.getChunk())) {
+                event.getEntities().stream().filter(Enemy.class::isInstance).forEach(Entity::remove);
+            }
         }
     }
 
@@ -399,32 +436,33 @@ public class UHCController implements Listener, Runnable {
         var player = UHCPlayer.getUHCPlayer(event.getPlayer().getUniqueId());
         //取得擊殺者
         var killer = event.getPlayer().getKiller();
-        //如果有擊殺者、並且該擊殺者為玩家
-        if (killer != null && EntityType.PLAYER.equals(killer.getType())) {
-            //延遲5秒後執行
-            TaskUtil.syncTask(() -> {
-                //判斷遊戲是否正在進行
-                if (isRunning()) {
-                    //判斷玩家是否再線上
-                    player.ifOnline(p -> {
-                        //將玩家進入觀察者模式
-                        p.setGameMode(GameMode.SPECTATOR);
-                        //附身再擊殺者身上
-                        p.setSpectatorTarget(killer);
-                    });
-                }
-            }, 100);
-        }
-        player.setGameMode(GameMode.CREATIVE);
+        //設置玩家為冒險者模式
+        player.setGameMode(GameMode.ADVENTURE);
+        //傳送至重生點
         event.setRespawnLocation(UHCConfig.getInstance().getSpawn());
+        //延遲3秒後執行
         TaskUtil.syncTask(() -> {
+            //判斷遊戲是否正在進行
             if (isRunning()) {
-                var spawn = Optional.ofNullable(player.getDeadLocation()).orElse(UHCConfig.getInstance().getSpawn());
-                player.teleport(spawn);
-                player.setGameMode(GameMode.SPECTATOR);
+                //判斷玩家是否再線上
+                player.ifOnline(p -> {
+                    //將玩家進入觀察者模式
+                    p.setGameMode(GameMode.SPECTATOR);
+                    //如果獲取死亡位置失敗，將會給重生點
+                    var spawn = Optional.ofNullable(player.getDeadLocation()).orElse(UHCConfig.getInstance().getSpawn());
+                    if (killer != null) {
+                        Player target = killer;
+                        while (target.getKiller() != null && target.getKiller().isOnline()) {
+                            target = target.getKiller();
+                        }
+                        //取得擊殺者位置
+                        spawn = target.getLocation();
+                    }
+                    p.teleport(spawn);
+                    Optional.ofNullable(killer).ifPresent(p::setSpectatorTarget);
+                });
             }
-        }, 10);
-
+        }, 40);
     }
 
     // 生物回血

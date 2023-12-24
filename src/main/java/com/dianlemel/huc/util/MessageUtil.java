@@ -1,5 +1,7 @@
 package com.dianlemel.huc.util;
 
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -91,6 +93,12 @@ public class MessageUtil {
         Bukkit.getServer().getOnlinePlayers().forEach(player -> {
             player.sendTitle(title, subtitle, fadeIn, stay, fadeOut);
         });
+    }
+
+    public static void sendActionBarToAll(BaseComponent... components) {
+        for (var player : Bukkit.getOnlinePlayers()) {
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, components);
+        }
     }
 
     public static void broadcastInfo(String message) {

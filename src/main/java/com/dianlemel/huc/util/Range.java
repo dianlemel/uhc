@@ -1,5 +1,6 @@
 package com.dianlemel.huc.util;
 
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.util.Vector;
@@ -38,6 +39,16 @@ public class Range {
 
     public Location getLocationForRandom() {
         return BukkitUtil.random(toList());
+    }
+
+    public boolean inChunk(Chunk chunk) {
+        var maxX = Math.max(r1.getChunk().getX(), r2.getChunk().getX());
+        var maxZ = Math.max(r1.getChunk().getZ(), r2.getChunk().getZ());
+        var minX = Math.min(r1.getChunk().getX(), r2.getChunk().getX());
+        var minZ = Math.min(r1.getChunk().getZ(), r2.getChunk().getZ());
+        var x = chunk.getX();
+        var z = chunk.getZ();
+        return minX <= x && x <= maxX && minZ <= z && z <= maxZ;
     }
 
     public boolean inRange(Location target) {

@@ -2,6 +2,7 @@ package com.dianlemel.huc.util;
 
 import com.google.common.collect.Lists;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.util.Vector;
@@ -98,9 +99,7 @@ public class LocationUtil {
         double minZ = Math.min(r1.getZ(), r2.getZ()) - 0.5;
         if (minX <= x && x <= maxX) {
             if (ignoreHeight || (minY <= y && y <= maxY)) {
-                if (minZ <= z && z <= maxZ) {
-                    return true;
-                }
+                return minZ <= z && z <= maxZ;
             }
         }
         return false;

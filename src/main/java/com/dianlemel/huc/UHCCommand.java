@@ -22,7 +22,7 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
     private final List<String> ON_OFF = Lists.newArrayList("true", "false");
 
     {
-        COMMANDS.put("start", "<秒> 開始遊戲");
+        COMMANDS.put("start", "<遊戲進行> <開始遊戲幾秒後顯示名稱> <剩餘幾秒後清除怪物> <剩餘幾秒後全體玩家發光> <剩餘幾秒開始縮圈> 開始遊戲");
         COMMANDS.put("stop", "<獲勝隊伍(可不填)> 結束遊戲");
         COMMANDS.put("createTeam", "<數量> 建立隊伍數量");
         COMMANDS.put("clearTeam", "解散、清除隊伍");
@@ -48,10 +48,14 @@ public class UHCCommand implements CommandExecutor, TabCompleter {
                         MessageUtil.sendInfo(sender, "重新讀取完成");
                         return true;
                     case "start":
-                        if (strings.length == 2) {
+                        if (strings.length == 6) {
                             try {
                                 var seconds = Integer.parseInt(strings[1]);
-                                UHCController.getInstance().start(seconds);
+                                var showNameTimer = Integer.parseInt(strings[2]);
+                                var clearMonsterTimer = Integer.parseInt(strings[3]);
+                                var glowingTimer = Integer.parseInt(strings[4]);
+                                var borderTimer = Integer.parseInt(strings[5]);
+                                UHCController.getInstance().start(seconds, showNameTimer, clearMonsterTimer, glowingTimer, borderTimer);
                                 return true;
                             } catch (NumberFormatException e) {
                                 MessageUtil.sendError(sender, e.getMessage());

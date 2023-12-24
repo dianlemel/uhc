@@ -23,14 +23,11 @@ public class UHCConfig {
     private String deadMusic;
     private Range spawn;
     private int borderTimer;
-    private int showNameTimer;
     private int borderMinRadius;
     private int borderMaxRadius;
     private int progressiveTriggerRule;
     private int baselineThreshold;
     private List<MapData> punishedEffects;
-    private int clearMonsterTimer;
-    private int glowingTimer;
     private List<MapData> specialItems;
     private int minDistance;
     private int spawnY;
@@ -53,11 +50,8 @@ public class UHCConfig {
         borderMaxRadius = border.getInteger("maxRadius");
 
         var start = config.getMapData("start");
-        glowingTimer = start.getInteger("glowingTimer");
         spawnY = start.getInteger("spawnY");
         minDistance = start.getInteger("minDistance");
-        showNameTimer = start.getInteger("showNameTimer");
-        clearMonsterTimer = start.getInteger("clearMonsterTimer");
         var punished = start.getMapData("punished");
         progressiveTriggerRule = punished.getInteger("progressiveTriggerRule");
         baselineThreshold = punished.getInteger("baselineThreshold");
@@ -90,10 +84,6 @@ public class UHCConfig {
         return deadMusic;
     }
 
-    public int getClearMonsterTimer() {
-        return clearMonsterTimer;
-    }
-
     public List<MapData> getSpecialItems() {
         return specialItems;
     }
@@ -104,14 +94,6 @@ public class UHCConfig {
 
     public int getSpawnY() {
         return spawnY;
-    }
-
-    public int getGlowingTimer() {
-        return glowingTimer;
-    }
-
-    public int getShowNameTimer() {
-        return showNameTimer;
     }
 
     public int getProgressiveTriggerRule() {
