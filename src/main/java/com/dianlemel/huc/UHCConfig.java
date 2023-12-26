@@ -23,7 +23,6 @@ public class UHCConfig {
     private String deadMusic;
     private int deadMusicCoolDown;
     private Range spawn;
-    private int borderTimer;
     private int borderMinRadius;
     private int borderMaxRadius;
     private String borderMusic;
@@ -48,7 +47,6 @@ public class UHCConfig {
         spawn = config.getRange("spawn");
 
         var border = config.getMapData("border");
-        borderTimer = border.getInteger("time");
         borderMinRadius = border.getInteger("minRadius");
         borderMaxRadius = border.getInteger("maxRadius");
         borderMusic = border.getString("music");
@@ -78,10 +76,6 @@ public class UHCConfig {
 
     public Location getSpawn() {
         return spawn.getLocationForRandom();
-    }
-
-    public int getBorderTimer() {
-        return borderTimer;
     }
 
     public int getBorderMinRadius() {

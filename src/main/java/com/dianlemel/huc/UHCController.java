@@ -199,7 +199,7 @@ public class UHCController implements Listener, Runnable {
         var worldBorder = world.getWorldBorder();
         var config = UHCConfig.getInstance();
         //設定需要花費幾秒時間，將邊界縮至指定的範圍
-        worldBorder.setSize(config.getBorderMinRadius(), config.getBorderTimer());
+        worldBorder.setSize(config.getBorderMinRadius(), borderTimer);
         BukkitUtil.playSoundToAll(config.getBorderMusic(), 1f, 0);
     }
 
