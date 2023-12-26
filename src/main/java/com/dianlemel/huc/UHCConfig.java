@@ -21,10 +21,12 @@ public class UHCConfig {
 
     private Location center;
     private String deadMusic;
+    private int deadMusicCoolDown;
     private Range spawn;
     private int borderTimer;
     private int borderMinRadius;
     private int borderMaxRadius;
+    private String borderMusic;
     private int progressiveTriggerRule;
     private int baselineThreshold;
     private List<MapData> punishedEffects;
@@ -42,12 +44,14 @@ public class UHCConfig {
         var config = new MapData(plugin.getConfig().getValues(false));
         center = config.getLocation("center");
         deadMusic = config.getString("deadMusic");
+        deadMusicCoolDown = config.getInteger("deadMusicCoolDown");
         spawn = config.getRange("spawn");
 
         var border = config.getMapData("border");
         borderTimer = border.getInteger("time");
         borderMinRadius = border.getInteger("minRadius");
         borderMaxRadius = border.getInteger("maxRadius");
+        borderMusic = border.getString("music");
 
         var start = config.getMapData("start");
         spawnY = start.getInteger("spawnY");
@@ -58,6 +62,14 @@ public class UHCConfig {
         punishedEffects = punished.getMapList("effects");
 
         specialItems = config.getMapList("specialItem");
+    }
+
+    public String getBorderMusic() {
+        return borderMusic;
+    }
+
+    public int getDeadMusicCoolDown() {
+        return deadMusicCoolDown;
     }
 
     public Location getCenter() {

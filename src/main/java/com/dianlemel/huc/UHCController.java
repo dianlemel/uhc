@@ -27,6 +27,7 @@ import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.RenderType;
 import org.bukkit.scoreboard.Team;
 
+import java.util.Calendar;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -54,6 +55,7 @@ public class UHCController implements Listener, Runnable {
     private int borderTimer = 0;
     private int time;
     private final World world;
+    private long deadMusicCoolDown = 0;
 
     public UHCController() {
         //確保只有一個世界
@@ -158,6 +160,7 @@ public class UHCController implements Listener, Runnable {
         MessageUtil.broadcastTitle("", "§6遊戲開始", 40, 40, 100);
 
         spawnMonster = true;
+        deadMusicCoolDown = Calendar.getInstance().getTimeInMillis();
         TaskUtil.syncTimer(this, 20, 20);
         TaskUtil.syncTaskLater(this::showName, showNameTimer * 20L);
         TaskUtil.syncTaskLater(() -> {
@@ -197,6 +200,7 @@ public class UHCController implements Listener, Runnable {
         var config = UHCConfig.getInstance();
         //設定需要花費幾秒時間，將邊界縮至指定的範圍
         worldBorder.setSize(config.getBorderMinRadius(), config.getBorderTimer());
+        BukkitUtil.playSoundToAll(config.getBorderMusic(), 1f, 0);
     }
 
     //顯示玩家名稱，可以看得到敵方
@@ -505,15 +509,21 @@ public class UHCController implements Listener, Runnable {
         item.setItemMeta(meta);
         deadLocation.getWorld().dropItemNaturally(deadLocation, item);
 
-        var music = UHCConfig.getInstance().getDeadMusic();
-        //播放死亡
-        BukkitUtil.playSoundToAll(music, 1f, 0);
+        var now = Calendar.getInstance().getTimeInMillis();
+        var config = UHCConfig.getInstance();
+        //確認冷卻時間
+        if (now - deadMusicCoolDown > config.getDeadMusicCoolDown() * 1000) {
+            deadMusicCoolDown = now;
+            var music = config.getDeadMusic();
+            //播放死亡音效
+            BukkitUtil.playSoundToAll(music, 1f, 0);
+        }
 
         //檢查
         check();
     }
 
-    //傳送
+    //傳送事件
     @EventHandler
     public void onEntityPortalEvent(EntityPortalEvent event) {
         //如果不是玩家就不處理

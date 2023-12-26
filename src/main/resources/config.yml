@@ -1,23 +1,27 @@
 #PVP世界中心點
-center: world,-7,-60,-5
+center: world,353,188,-1986
+#死亡音效冷卻時間(秒)
+deadMusicCoolDown: 30
 #死亡音效
-deadMusic: 'minecraft:block.anvil.place'
+deadMusic: 'minecraft:uhc.birthday'
 #重生點範圍
 spawn:
-  R1: world,-2,-53,-2
-  R2: world,-15,-53,-15
+  R1: world,345,189,-1996
+  R2: world,362,189,-1979
 #邊界
 border:
+  #縮圈開始音效
+  music: 'minecraft:uhc.padoru'
   #縮圈至指定範圍(直徑)
-  minRadius: 16
+  minRadius: 10
   #遊戲開始最大範圍(直徑)
-  maxRadius: 48
+  maxRadius: 512
 #遊戲開始設定
 start:
   #每隊重生的最小距離
-  minDistance: 2
+  minDistance: 100
   #每隊重生初始高度
-  spawnY: 0
+  spawnY: 160
   #開始遊戲幾秒後顯示名稱
   showNameTimer: 20
   #剩餘幾秒後清除怪物(秒)
@@ -101,139 +105,139 @@ specialItem:
     #隨機物品
     randomItem:
       - material: STONE
-        chance: 4
+        chance: 20
         amount: 64
       - material: SPRUCE_PLANKS
-        chance: 4
+        chance: 20
         amount: 16
       - material: APPLE
-        chance: 3
+        chance: 10
         amount: 8
       - material: LAPIS_LAZULI
-        chance: 3
+        chance: 8
         amount: 16
       - material: COAL
-        chance: 3
+        chance: 10
         amount: 16
       - material: IRON_INGOT
-        chance: 3
+        chance: 8
         amount: 16
       - material: LEATHER_CHESTPLATE
-        chance: 3
+        chance: 10
         amount: 1
       - material: LEATHER
-        chance: 3
+        chance: 8
         amount: 1
       - material: WOODEN_SWORD
-        chance: 3
+        chance: 10
         amount: 1
       - material: STONE_SWORD
-        chance: 3
+        chance: 10
         amount: 1
       - material: GOLDEN_SWORD
-        chance: 3
+        chance: 8
         amount: 1
       - material: IRON_SWORD
-        chance: 3
+        chance: 8
         amount: 1
       - material: BOW
-        chance: 3
+        chance: 8
         amount: 1
       - material: ARROW
-        chance: 3
+        chance: 10
         amount: 32
       - material: COPPER_INGOT
-        chance: 3
+        chance: 10
         amount: 16
       - material: REDSTONE
-        chance: 3
+        chance: 10
         amount: 16
       - material: COOKED_BEEF
-        chance: 3
+        chance: 10
         amount: 16
       - material: ROTTEN_FLESH
-        chance: 3
+        chance: 10
         amount: 16
       - material: FISHING_ROD
-        chance: 3
+        chance: 8
         amount: 1
       - material: PAPER
-        chance: 3
+        chance: 10
         amount: 16
       - material: CAKE
-        chance: 3
+        chance: 8
         amount: 1
       - material: WATER_BUCKET
-        chance: 3
+        chance: 8
         amount: 1
       - material: BONE_MEAL
-        chance: 3
+        chance: 10
         amount: 16
       - material: STRING
-        chance: 3
+        chance: 8
         amount: 16
       - material: HORSE_SPAWN_EGG
-        chance: 2
+        chance: 5
         amount: 1
       - material: IRON_CHESTPLATE
-        chance: 2
+        chance: 5
         amount: 1
       - material: POTION
-        chance: 2
+        chance: 5
         amount: 1
         effects:
           - name: SPEED
             level: 0
             time: 30
       - material: SPLASH_POTION
-        chance: 2
+        chance: 5
         amount: 1
         effects:
           - name: WEAKNESS
             level: 0
             time: 20
       - material: POTION
-        chance: 2
+        chance: 5
         amount: 1
         effects:
           - name: JUMP
             level: 0
             time: 30
       - material: ENDER_PEARL
-        chance: 2
+        chance: 5
         amount: 2
       - material: OBSIDIAN
-        chance: 2
+        chance: 5
         amount: 4
       - material: GOLDEN_CHESTPLATE
-        chance: 2
+        chance: 5
         amount: 1
       - material: GOLD_INGOT
-        chance: 2
+        chance: 5
         amount: 8
       - material: DIAMOND
-        chance: 1
+        chance: 2
         amount: 4
       - material: LAVA_BUCKET
-        chance: 1
+        chance: 2
         amount: 1
       - material: DIAMOND_CHESTPLATE
-        chance: 1
+        chance: 2
         amount: 1
       - material: GOLDEN_APPLE
-        chance: 1
+        chance: 2
         amount: 1
       - material: DIAMOND_SWORD
-        chance: 1
+        chance: 2
         amount: 1
       - material: TNT
-        chance: 1
+        chance: 2
         amount: 1
       - material: CREEPER_SPAWN_EGG
-        chance: 1
+        chance: 2
         amount: 1
       - material: POTION
-        chance: 1
+        chance: 2
         amount: 1
         effects:
           - name: HEAL
