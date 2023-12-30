@@ -32,6 +32,7 @@ public class UHCConfig {
     private List<MapData> specialItems;
     private int minDistance;
     private int spawnY;
+    private int invincible;
 
     private UHCConfig() {
         loadConfig();
@@ -52,6 +53,7 @@ public class UHCConfig {
         borderMusic = border.getString("music");
 
         var start = config.getMapData("start");
+        invincible = start.getInteger("invincible");
         spawnY = start.getInteger("spawnY");
         minDistance = start.getInteger("minDistance");
         var punished = start.getMapData("punished");
@@ -60,6 +62,10 @@ public class UHCConfig {
         punishedEffects = punished.getMapList("effects");
 
         specialItems = config.getMapList("specialItem");
+    }
+
+    public int getInvincible() {
+        return invincible;
     }
 
     public String getBorderMusic() {

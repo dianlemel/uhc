@@ -38,6 +38,7 @@ public class UHCController implements Listener, Runnable {
 
     private static final String HEALTH_PLAYER_LIST = "HEALTH_PLAYER_LIST";
     private static final String HEALTH_BELOW_NAME = ChatColor.RED + "❤";
+    private static final int[] PITCH = new int[]{0, 2};
 
     private static UHCController controller;
 
@@ -50,7 +51,7 @@ public class UHCController implements Listener, Runnable {
 
     private boolean isRunning = false;
     private boolean spawnMonster = true;
-    private boolean isInjuryExempt = false;
+    private boolean isInvincible = true;
     private int clearMonsterTimer = 0;
     private int glowingTimer = 0;
     private int borderTimer = 0;
@@ -111,7 +112,7 @@ public class UHCController implements Listener, Runnable {
             throw new UHCException("遊戲正在進行中");
         }
         isRunning = true;
-        isInjuryExempt = true;
+        isInvincible = true;
         this.clearMonsterTimer = clearMonsterTimer;
         this.glowingTimer = glowingTimer;
         this.borderTimer = borderTimer;
@@ -165,14 +166,16 @@ public class UHCController implements Listener, Runnable {
         deadMusicCoolDown = Calendar.getInstance().getTimeInMillis();
         TaskUtil.syncTimer(this, 20, 20);
         TaskUtil.syncTaskLater(this::showName, showNameTimer * 20L);
+        //無敵倒數
         TaskUtil.syncTaskLater(() -> {
-            isInjuryExempt = false;
-        }, 100);
+            isInvincible = false;
+        }, config.getInvincible() * 20);
 
-        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，開始顯示玩家ID", showNameTimer));
-        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，清除怪物", clearMonsterTimer));
-        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，全體發光", glowingTimer));
-        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，開始縮圈", borderTimer));
+        MessageUtil.broadcastInfo(String.format("遊戲開始 %d 秒後，開始顯示玩家ID", showNameTimer));
+        MessageUtil.broadcastInfo(String.format("遊戲開始 %d 秒內，無敵", config.getInvincible()));
+        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，清除怪物", this.clearMonsterTimer));
+        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，全體發光", this.glowingTimer));
+        MessageUtil.broadcastInfo(String.format("剩餘 %d 秒後，開始縮圈", this.borderTimer));
 
         //隱藏玩家名稱，只有隊伍自己人看得到
         UHCTeam.getTeams().forEach(team -> team.getScoreboardTeam().setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OTHER_TEAMS));
@@ -202,7 +205,7 @@ public class UHCController implements Listener, Runnable {
         var config = UHCConfig.getInstance();
         //設定需要花費幾秒時間，將邊界縮至指定的範圍
         worldBorder.setSize(config.getBorderMinRadius(), borderTimer);
-        BukkitUtil.playSoundToAll(config.getBorderMusic(), 1f, 1);
+        BukkitUtil.playSoundToAll(config.getBorderMusic(), 10f, 1);
     }
 
     //顯示玩家名稱，可以看得到敵方
@@ -430,8 +433,8 @@ public class UHCController implements Listener, Runnable {
             event.setCancelled(true);
             return;
         }
-        //當傷害是摔傷，並且還是免於摔傷期間
-        if (EntityDamageEvent.DamageCause.FALL.equals(event.getCause()) && isInjuryExempt) {
+        //無敵時間
+        if (isInvincible) {
             event.setCancelled(true);
         }
     }
@@ -518,7 +521,7 @@ public class UHCController implements Listener, Runnable {
             deadMusicCoolDown = now;
             var music = config.getDeadMusic();
             //播放死亡音效
-            BukkitUtil.playSoundToAll(music, 1f, random.nextInt(3));
+            BukkitUtil.playSoundToAll(music, 1f, PITCH[random.nextInt(2)]);
         }
 
         //檢查

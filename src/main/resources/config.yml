@@ -18,6 +18,8 @@ border:
   maxRadius: 512
 #遊戲開始設定
 start:
+  #無敵時間(秒)
+  invincible: 30
   #每隊重生的最小距離
   minDistance: 100
   #每隊重生初始高度
