@@ -128,8 +128,8 @@ public class LocationUtil {
     }
 
     public static Range calculate2DRange(Location center, double radius) {
-        Vector r1 = new Vector(center.getX() - radius, 0, center.getY() + radius);
-        Vector r2 = new Vector(center.getX() + radius, 0, center.getY() - radius);
+        Vector r1 = new Vector(center.getX() - radius, 0, center.getZ() + radius);
+        Vector r2 = new Vector(center.getX() + radius, 0, center.getZ() - radius);
         return new Range(r1.toLocation(center.getWorld()), r2.toLocation(center.getWorld()));
     }
 
