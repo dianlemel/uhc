@@ -38,7 +38,7 @@ public class UHCController implements Listener, Runnable {
 
     private static final String HEALTH_PLAYER_LIST = "HEALTH_PLAYER_LIST";
     private static final String HEALTH_BELOW_NAME = ChatColor.RED + "❤";
-    private static final int[] PITCH = new int[]{0, 2};
+    private static final int[] PITCH = new int[]{1, 2};
 
     private static UHCController controller;
 
@@ -264,13 +264,6 @@ public class UHCController implements Listener, Runnable {
                 MessageUtil.sendError(e);
             }
         }, 20);
-    }
-
-    //天氣改變
-    @EventHandler
-    public void onWeatherChangeEvent(WeatherChangeEvent event) {
-        //阻止天氣改變
-        event.setCancelled(true);
     }
 
     //實體生成
