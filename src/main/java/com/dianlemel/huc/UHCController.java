@@ -442,29 +442,34 @@ public class UHCController implements Listener, Runnable {
         player.setGameMode(GameMode.ADVENTURE);
         //傳送至重生點
         event.setRespawnLocation(UHCConfig.getInstance().getSpawn());
-        //延遲3秒後執行
-        TaskUtil.syncTask(() -> {
-            //判斷遊戲是否正在進行
-            if (isRunning()) {
-                //判斷玩家是否再線上
-                player.ifOnline(p -> {
-                    //將玩家進入觀察者模式
-                    p.setGameMode(GameMode.SPECTATOR);
-                    //如果獲取死亡位置失敗，將會給重生點
-                    var spawn = Optional.ofNullable(player.getDeadLocation()).orElse(UHCConfig.getInstance().getSpawn());
-                    if (killer != null) {
-                        Player target = killer;
-                        while (target.getKiller() != null && target.getKiller().isOnline()) {
-                            target = target.getKiller();
+        var task = new Runnable(){
+            UHCPlayer target = player;
+            @Override
+            public void run(){
+                //判斷遊戲是否正在進行
+                if (isRunning()) {
+                    //判斷玩家是否再線上
+                    target.ifOnline(p -> {
+                        //將玩家進入觀察者模式
+                        p.setGameMode(GameMode.SPECTATOR);
+                        //如果獲取死亡位置失敗，將會給重生點
+                        var spawn = Optional.ofNullable(target.getDeadLocation()).orElse(UHCConfig.getInstance().getSpawn());
+                        if (killer != null) {
+                            Player target = killer;
+                            while (target.getKiller() != null && target.getKiller().isOnline()) {
+                                target = target.getKiller();
+                            }
+                            //取得擊殺者位置
+                            spawn = target.getLocation();
                         }
-                        //取得擊殺者位置
-                        spawn = target.getLocation();
-                    }
-                    p.teleport(spawn);
-                    Optional.ofNullable(killer).ifPresent(p::setSpectatorTarget);
-                });
+                        p.teleport(spawn);
+                        Optional.ofNullable(killer).ifPresent(p::setSpectatorTarget);
+                    });
+                }
             }
-        }, 40);
+        };
+        //延遲3秒後執行
+        TaskUtil.syncTask(task, 40);
     }
 
     // 生物回血
