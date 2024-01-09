@@ -454,7 +454,7 @@ public class UHCController implements Listener, Runnable {
                     var spawn = Optional.ofNullable(player.getDeadLocation()).orElse(UHCConfig.getInstance().getSpawn());
                     if (killer != null) {
                         //取得擊殺者位置
-                        spawn = target.getLocation();
+                        spawn = killer.getLocation();
                     }
                     p.teleport(spawn);
                     Optional.ofNullable(killer).ifPresent(p::setSpectatorTarget);
